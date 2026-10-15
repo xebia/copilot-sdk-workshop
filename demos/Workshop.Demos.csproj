@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../shared/Workshop.Tools/Workshop.Tools.csproj" />
+    <Compile Remove="mcp-server/**" />
+  </ItemGroup>
+</Project>

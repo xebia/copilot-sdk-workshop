@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsTestProject>true</IsTestProject>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="ModelContextProtocol" />
+    <ProjectReference Include="../../shared/Workshop.Tools/Workshop.Tools.csproj" />
+    <ProjectReference Include="../../labs/03-agent/solution/Lab03.Solution.csproj" />
+    <None Include="../../labs/03-agent/solution/agents/*.agent.md" Link="lab3-agents/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <ProjectReference Include="../../demos/mcp-server/Workshop.McpServer.csproj" />
+  </ItemGroup>
+</Project>

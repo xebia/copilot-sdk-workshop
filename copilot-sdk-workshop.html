@@ -139,7 +139,7 @@ h2.smaller{font-size:96px}
 .split2{display:grid;grid-template-columns:1fr 1fr;gap:0;height:100%}
 .vline{width:1px;background:var(--border);align-self:stretch}
 
-/* left green edge (title/closing) */
+/* left green edge (title) */
 .edge{position:absolute;left:96px;top:120px;bottom:140px;width:2px;background:linear-gradient(180deg,var(--green),rgba(63,185,80,.05))}
 
 /* ===========================================
@@ -159,6 +159,26 @@ h2.smaller{font-size:96px}
 .frag.on{opacity:1;transform:none}
 /* fragments that dim once a later fragment appears */
 .frag.on.dimmed{opacity:.3}
+
+/* === OPENING SEQUENCE AND WORKSHOP AGENDA === */
+.title-architecture{opacity:0;transform:translateY(14px);transition:opacity .5s var(--ease),transform .5s var(--ease)}
+.title-architecture.ready{opacity:1;transform:none}
+.title-architecture.ready .ch{animation:drawH .5s var(--ease) backwards;transform-origin:left}
+.agenda{position:absolute;left:940px;right:150px;top:150px}
+.agenda-step{padding:30px 0 34px;border-top:1px solid var(--border)}
+.agenda-step:first-child{border-top-color:var(--green-dim)}
+.agenda-step h3{font:600 57px/1.05 var(--font-display);color:var(--text);text-transform:uppercase}
+.agenda-step .body{font-size:26px;line-height:1.45;margin-top:16px}
+.agenda-lab{font:400 21px/1.5 var(--font-mono);color:var(--green);margin-top:18px}
+.auto-flow > *,.slide .auto-step{opacity:0;transform:translateY(14px);transition:opacity .4s var(--ease),transform .4s var(--ease);transition-delay:calc(.25s + var(--step)*.1s)}
+.slide.visible .auto-flow > *,.slide.visible .auto-step{opacity:1;transform:none}
+
+/* === AGENT LOOP: separate model decisions from runtime execution === */
+.loop-canvas{position:absolute;right:120px;top:120px;width:850px;height:850px}
+.node.loop-node{position:absolute;width:300px;height:100px;padding:14px 20px;font-size:25px;flex-direction:column;gap:6px;white-space:nowrap}
+.loop-arrows{position:absolute;inset:0;width:850px;height:850px;overflow:visible}
+.loop-arrows path{fill:none;stroke-width:2}
+.loop-arrows text{font:400 21px var(--font-mono);fill:var(--muted)}
 
 /* ===========================================
    DIAGRAM VOCABULARY - engineering nodes & connectors
@@ -212,6 +232,8 @@ h2.smaller{font-size:96px}
 .code.sm{font-size:26px;line-height:1.7}
 .cl{display:block;white-space:pre;border-radius:8px;padding:0 18px;margin:0 -18px;transition:background .4s,opacity .4s}
 .cl.cur{background:rgba(63,185,80,.1);box-shadow:inset 3px 0 0 var(--green)}
+.code-focus.frag{display:block;opacity:1;transform:none;margin:0 -18px;padding:0 18px;border-radius:8px;transition:background .25s,box-shadow .25s}
+.code-focus.cur{background:rgba(63,185,80,.1);box-shadow:inset 3px 0 0 var(--green)}
 .slide .cl.faded{opacity:.38}
 /* syntax colors */
 .k{color:var(--purple)}      /* keyword */
@@ -252,6 +274,12 @@ h2.smaller{font-size:96px}
 .hr{height:1px;background:var(--border)}
 .hr.g{background:linear-gradient(90deg,var(--green),transparent)}
 
+/* === REFERENCE LINKS AND REPOSITORY COMMANDS === */
+.reference-link{color:var(--text);text-decoration-color:var(--green);text-underline-offset:7px}
+.reference-link:hover,.reference-link:focus-visible{color:var(--green)}
+.run{font:400 24px/1.7 var(--font-mono);color:var(--text)}
+.run .c{color:var(--muted)}
+
 /* ===========================================
    PRESENTATION CHROME (outside slide design)
    =========================================== */
@@ -288,10 +316,10 @@ body.editing .slide [contenteditable]{outline:1px dashed rgba(63,185,80,.5);outl
     <h1 class="reveal">GitHub Copilot<br><span class="g">SDK</span></h1>
     <p class="reveal d2" style="margin-top:56px;font:500 46px/1.3 var(--font-body);color:var(--muted)">Build <span class="g">with Copilot</span>,<br>not around Copilot.</p>
     <div class="term reveal d4" style="margin-top:90px"><span class="prompt">&gt;</span> <span id="typed"></span><span class="cursor"></span></div>
-    <!-- stepped: terminal resolves into first architecture -->
-    <div class="frag" style="margin-top:60px">
+    <!-- The first architecture follows the completed terminal text automatically. -->
+    <div class="title-architecture" id="titleArchitecture" style="margin-top:60px">
       <div class="flow" style="gap:0">
-        <div class="node">APP</div><div class="ch g draw"></div><div class="node n-green">COPILOT</div>
+        <div class="node">APP</div><div class="ch g"></div><div class="node n-green">COPILOT</div>
       </div>
     </div>
   </div>
@@ -302,24 +330,26 @@ body.editing .slide [contenteditable]{outline:1px dashed rgba(63,185,80,.5);outl
      ============================================================ -->
 <section class="slide" data-name="today">
   <div class="pad">
-    <div class="kicker reveal">Today</div>
-    <h2 class="reveal d1" style="margin-top:36px;font-size:100px">One concept<br>at a time.</h2>
-    <div style="position:absolute;right:170px;top:130px;bottom:160px;display:flex;align-items:center">
-      <div class="flow v" style="gap:0">
-        <div class="node n-purple frag">PROMPT</div>
-        <div class="cv frag"></div>
-        <div class="node frag">SESSION</div>
-        <div class="cv frag"></div>
-        <div class="node n-amber frag">TOOL</div>
-        <div class="cv frag"></div>
-        <div class="node n-green frag">AGENT</div>
-        <div class="cv frag"></div>
-        <div class="node n-blue frag">MCP</div>
-        <div class="cv frag"></div>
-        <div class="node frag">MULTIPLE AGENTS</div>
+    <div class="kicker reveal">Today's workshop</div>
+    <h2 class="reveal d1" style="margin-top:55px;font-size:116px;max-width:650px">From prompt<br>to working<br><span class="g">agent.</span></h2>
+    <div class="agenda">
+      <div class="agenda-step reveal d2">
+        <h3><span class="g">01</span> &nbsp;Connect to the runtime</h3>
+        <p class="body">The SDK architecture, sessions, the agent loop<br>and streaming events.</p>
+        <div class="agenda-lab">LAB 01 · HELLO COPILOT</div>
+      </div>
+      <div class="agenda-step reveal d3">
+        <h3><span class="g">02</span> &nbsp;Give it tools</h3>
+        <p class="body">Custom capabilities, tool calls and clear contracts.<br>Let the agent choose. Keep the evidence explicit.</p>
+        <div class="agenda-lab">LAB 02 · YOUR FIRST CUSTOM TOOL</div>
+      </div>
+      <div class="agenda-step reveal d4">
+        <h3><span class="g">03</span> &nbsp;Delegate to specialists</h3>
+        <p class="body">Explore MCP, persistence and permissions.<br>Then define specialist agents in files.</p>
+        <div class="agenda-lab">LAB 03 · FILES, ROLES AND DELEGATION<br>OPTIONAL · RELEASE-READINESS CHALLENGE</div>
       </div>
     </div>
-    <p class="body reveal d3" style="position:absolute;left:150px;bottom:160px;max-width:760px">Not every feature in the SDK, but the <strong>mental model</strong>. If you understand sessions, the agent loop, tools and MCP, the rest has somewhere to live.</p>
+    <p class="body reveal d4" style="position:absolute;left:150px;bottom:165px;max-width:630px;font-size:29px"><strong>Three labs. Read-only examples.</strong><br>Build up from a first prompt to an agent<br>that investigates using real tool results.</p>
   </div>
 </section>
 
@@ -332,54 +362,16 @@ body.editing .slide [contenteditable]{outline:1px dashed rgba(63,185,80,.5);outl
     <h2 class="reveal d1" style="margin-top:36px">Not another<br>model SDK.</h2>
     <p class="body reveal d3" style="margin-top:56px;max-width:700px">Your application talks to the SDK client. The SDK talks over JSON-RPC to the Copilot CLI running in server mode. <strong>That CLI is where the agent runtime lives.</strong></p>
     <div style="position:absolute;right:190px;top:110px;bottom:140px;display:flex;align-items:center">
-      <div class="flow v" style="gap:0">
-        <div class="node frag" style="min-width:420px">YOUR APPLICATION</div>
-        <div class="cv frag"></div>
-        <div class="node n-green frag" style="min-width:420px">COPILOT SDK</div>
-        <div class="cv frag"></div>
-        <div class="node n-ghost n-grey frag" style="min-width:420px">JSON-RPC</div>
-        <div class="cv frag"></div>
-        <div class="node n-green frag" style="min-width:420px;flex-direction:column;gap:6px">COPILOT CLI<small>agent runtime</small></div>
-        <div class="cv frag"></div>
-        <div class="node n-blue frag" style="min-width:420px">MODEL</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ============================================================
-     SLIDE 04 - MODEL CALL vs AGENT RUNTIME
-     ============================================================ -->
-<section class="slide" data-name="call-vs-runtime">
-  <div class="pad">
-    <div class="kicker reveal">The distinction that matters</div>
-    <div class="split2" style="margin-top:70px;height:calc(100% - 120px);grid-template-columns:1fr 1px 1.2fr;gap:80px">
-      <div>
-        <div class="kicker reveal d1" style="color:var(--muted)">Model call</div>
-        <div class="flow v reveal d2" style="margin-top:60px;gap:0">
-          <div class="node n-purple">PROMPT</div>
-          <div class="cv"></div>
-          <div class="node n-blue">MODEL</div>
-          <div class="cv"></div>
-          <div class="node">ANSWER</div>
-        </div>
-      </div>
-      <div class="vline reveal d2"></div>
-      <div>
-        <div class="kicker reveal d1"><span class="g">Agent runtime</span></div>
-        <div class="flow v" style="margin-top:60px;gap:0">
-          <div class="node n-purple frag">PROMPT</div>
-          <div class="cv g frag"></div>
-          <div class="node n-blue frag">MODEL</div>
-          <div class="cv g frag"></div>
-          <div class="node n-amber frag">TOOL</div>
-          <div class="cv g frag"></div>
-          <div class="node n-grey frag">RESULT</div>
-          <div class="cv g frag"></div>
-          <div class="node n-blue frag">MODEL&nbsp;&nbsp;<small style="display:inline;color:var(--green)">↺ …until idle</small></div>
-          <div class="cv g frag"></div>
-          <div class="node n-green frag">ANSWER</div>
-        </div>
+      <div class="flow v auto-flow" style="gap:0">
+        <div class="node" style="--step:0;min-width:420px">YOUR APPLICATION</div>
+        <div class="cv" style="--step:1"></div>
+        <div class="node n-green" style="--step:2;min-width:420px">COPILOT SDK</div>
+        <div class="cv" style="--step:3"></div>
+        <div class="node n-ghost n-grey" style="--step:4;min-width:420px">JSON-RPC</div>
+        <div class="cv" style="--step:5"></div>
+        <div class="node n-green" style="--step:6;min-width:420px;flex-direction:column;gap:6px">COPILOT CLI<small>agent runtime</small></div>
+        <div class="cv" style="--step:7"></div>
+        <div class="node n-blue" style="--step:8;min-width:420px">MODEL</div>
       </div>
     </div>
   </div>
@@ -396,9 +388,54 @@ body.editing .slide [contenteditable]{outline:1px dashed rgba(63,185,80,.5);outl
   </div>
 </section>
 
-<!-- ============================================================
-     SLIDE 06 - LAB 01 INTRO
-     ============================================================ -->
+<!-- === SETUP: prerequisites for the participant's own application === -->
+<section class="slide" data-name="setup">
+  <div class="pad">
+    <div class="kicker reveal">Before the first prompt</div>
+    <h2 class="reveal d1" style="margin-top:36px;font-size:96px">Runtime included.<br><span class="g">Sign-in required.</span></h2>
+    <div class="body reveal d2" style="margin-top:46px;max-width:700px;font-size:29px">
+      <p><strong>Workshop baseline:</strong> .NET 10<br>GitHub.Copilot.SDK <span class="g">1.0.22</span></p>
+      <p style="margin-top:28px">Build downloads the matching runtime. No separate CLI install is needed to run the app.</p>
+      <p style="margin-top:28px">Allow NuGet, GitHub release downloads and Copilot endpoints. Model calls consume your Copilot allowance.</p>
+    </div>
+    <div style="position:absolute;right:150px;top:140px;width:750px">
+      <div class="lab-goal reveal d2">
+        <div class="lbl">LOCAL AUTHENTICATION</div>
+        <p class="body" style="font-size:27px">Reuse an existing Copilot sign-in. Otherwise install Copilot CLI, run <span class="g" style="font-family:var(--font-mono)">copilot</span> and sign in once.</p>
+        <p class="body" style="margin-top:24px;font-size:26px">The SDK reuses stored credentials. A supported token via <span style="font-family:var(--font-mono)">COPILOT_GITHUB_TOKEN</span> is an alternative. Never put tokens in source.</p>
+      </div>
+      <div class="lab-goal reveal d3" style="margin-top:28px">
+        <div class="lbl">BRING YOUR OWN CONSOLE APP</div>
+        <div class="run">dotnet --version</div>
+        <p class="body" style="margin-top:20px;font-size:26px">Install the .NET 10 SDK and have your editor ready. Lab 1 gives the project setup commands.</p>
+        <p class="body" style="margin-top:20px;font-size:26px"><strong>No starter repository needed.</strong> Build the labs yourself from the slide instructions.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- === WORKSHOP BOUNDARY: narrow the runtime before using it === -->
+<section class="slide" data-name="workshop-boundary">
+  <div class="pad">
+    <div class="kicker reveal">Choose the boundary first</div>
+    <h2 class="reveal d1" style="margin-top:36px;font-size:104px">Already an agent.<br><span class="g">Deliberately scoped.</span></h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:100px;margin-top:80px">
+      <div class="reveal d2">
+        <div class="kicker" style="font-size:22px;color:var(--amber)">TOOL AVAILABILITY</div>
+        <p class="body" style="margin-top:30px;font-size:30px">The default runtime exposes built-in tools. <strong>Lab 1 allows none.</strong> Later labs allow only their own read-only capabilities.</p>
+        <p class="body" style="margin-top:28px;font-size:27px">Registering a custom tool does not remove built-ins. Use an explicit <span class="g" style="font-family:var(--font-mono)">AvailableTools</span> allowlist.</p>
+      </div>
+      <div class="reveal d3">
+        <div class="kicker" style="font-size:22px;color:var(--green)">PERMISSION POLICY</div>
+        <p class="body" style="margin-top:30px;font-size:30px"><span style="font-family:var(--font-mono)">ApproveAll</span> is a classroom shortcut for this narrow tool set. <strong>It is not a sandbox or production policy.</strong></p>
+        <p class="body" style="margin-top:28px;font-size:27px">It throws when managed settings are enabled. Follow organisation policy; never bypass it to make a demo work.</p>
+      </div>
+    </div>
+    <p class="body frag" style="position:absolute;left:150px;bottom:150px;max-width:1400px;font-size:31px">The agent loop exists from the first session. We progressively add <strong>domain capabilities</strong>, not the runtime itself.</p>
+  </div>
+</section>
+
+<!-- === LAB 01 INTRO === -->
 <section class="slide" data-name="lab-1">
   <div class="pad">
     <div class="lab-num reveal">LAB 01</div>
@@ -407,15 +444,12 @@ body.editing .slide [contenteditable]{outline:1px dashed rgba(63,185,80,.5);outl
     <div style="position:absolute;right:150px;top:140px;width:720px">
       <div class="lab-goal reveal d2">
         <div class="lbl">GOAL</div>
-        <p class="body" style="font-size:29px">Create a console application, create a session and ask Copilot one question.</p>
+        <p class="body" style="font-size:29px">Create a console application, create a session, send one prompt and print the answer.</p>
         <div class="hr" style="margin:36px 0"></div>
-        <div class="mt" style="font-size:25px;line-height:2">
-          <span class="m">$</span> dotnet new console -n CopilotSdkWorkshop<br>
-          <span class="m">$</span> cd CopilotSdkWorkshop<br>
-          <span class="m">$</span> dotnet add package <span class="g">GitHub.Copilot.SDK</span>
-        </div>
+        <div class="run">dotnet new console -n CopilotSdkWorkshop<br>cd CopilotSdkWorkshop<br>dotnet add package GitHub.Copilot.SDK \<br>&nbsp; --version 1.0.22</div>
       </div>
-      <p class="body reveal d3" style="margin-top:40px;font-size:26px">No tools. No MCP. No clever architecture.<br><strong>Just prove your application can talk to the runtime.</strong></p>
+      <p class="body reveal d3" style="margin-top:32px;font-size:27px;color:var(--text)">“Explain dependency injection in one sentence.”</p>
+      <p class="body reveal d4" style="margin-top:28px;font-size:26px">Set <span class="g" style="font-family:var(--font-mono)">AvailableTools = []</span>.<br>No tools. No MCP. <strong>Just your app and the runtime.</strong></p>
     </div>
   </div>
 </section>
@@ -425,25 +459,40 @@ body.editing .slide [contenteditable]{outline:1px dashed rgba(63,185,80,.5);outl
      ============================================================ -->
 <section class="slide" data-name="lab-1-code">
   <div class="pad">
-    <div class="kicker reveal">Lab 01 · The smallest useful path</div>
-    <div class="code sm reveal d2" style="margin-top:56px;max-width:1500px;line-height:1.62">
+    <div class="kicker reveal">Debrief · Lab 01 · The smallest useful path</div>
+    <div class="code reveal d2" data-code="hello-setup" style="margin-top:70px;max-width:1500px;line-height:1.7">
 <span class="cl"><span class="k">using</span> <span class="t">GitHub.Copilot</span>;</span>
 <span class="cl">&nbsp;</span>
-<span class="cl frag" data-hl><span class="k">await using var</span> <span class="n">client</span> = <span class="k">new</span> <span class="t">CopilotClient</span>();</span>
+<span class="cl auto-step" style="--step:0"><span class="k">await using var</span> <span class="n">client</span> = <span class="k">new</span> <span class="t">CopilotClient</span>();</span>
 <span class="cl">&nbsp;</span>
-<span class="cl frag" data-hl><span class="k">await using var</span> <span class="n">session</span> = <span class="k">await</span> client.<span class="f">CreateSessionAsync</span>(<span class="k">new</span> <span class="t">SessionConfig</span></span>
-<span class="cl frag" data-hl>{</span>
-<span class="cl frag" data-hl>    Model = <span class="s">"auto"</span>,</span>
-<span class="cl frag" data-hl>    OnPermissionRequest = <span class="t">PermissionHandler</span>.<span class="f">ApproveAll</span></span>
-<span class="cl frag" data-hl>});</span>
-<span class="cl">&nbsp;</span>
-<span class="cl frag" data-hl><span class="k">var</span> <span class="n">response</span> = <span class="k">await</span> session.<span class="f">SendAndWaitAsync</span>(<span class="k">new</span> <span class="t">MessageOptions</span></span>
-<span class="cl frag" data-hl>{</span>
-<span class="cl frag" data-hl>    Prompt = <span class="s">"Explain dependency injection in one sentence."</span></span>
-<span class="cl frag" data-hl>});</span>
-<span class="cl">&nbsp;</span>
-<span class="cl frag" data-hl><span class="t">Console</span>.<span class="f">WriteLine</span>(response?.Data.Content);</span>
+<span class="cl auto-step" style="--step:1"><span class="k">await using var</span> <span class="n">session</span> = <span class="k">await</span> client.<span class="f">CreateSessionAsync</span>(<span class="k">new</span> <span class="t">SessionConfig</span></span>
+<span class="cl auto-step" style="--step:2">{</span>
+<span class="cl auto-step" style="--step:3">    Model = <span class="s">"auto"</span>,</span>
+<span class="cl auto-step" style="--step:4">    AvailableTools = [],</span>
+<span class="cl auto-step" style="--step:5">    OnPermissionRequest = <span class="t">PermissionHandler</span>.<span class="f">ApproveAll</span></span>
+<span class="cl auto-step" style="--step:6">});</span>
     </div>
+    <p class="body auto-step" style="--step:8;margin-top:48px;max-width:1200px;font-size:29px">An ongoing session in an existing agent runtime. <strong>The empty allowlist keeps this exercise text-only.</strong></p>
+  </div>
+</section>
+
+<!-- === LAB 01 CONTINUATION: send, wait and check the result === -->
+<section class="slide" data-name="lab-1-message">
+  <div class="pad">
+    <div class="kicker reveal">Debrief · Lab 01 · Continue in the same Program.cs</div>
+    <h2 class="reveal d1" style="margin-top:36px;font-size:88px">Send. Wait.<br><span class="g">Check the result.</span></h2>
+    <div class="code sm reveal d2" data-code="hello-message" style="margin-top:52px;line-height:1.65">
+<span class="cl auto-step" style="--step:0"><span class="k">var</span> <span class="n">response</span> = <span class="k">await</span> session.<span class="f">SendAndWaitAsync</span>(<span class="k">new</span> <span class="t">MessageOptions</span></span>
+<span class="cl auto-step" style="--step:1">{</span>
+<span class="cl auto-step" style="--step:2">    Prompt = <span class="s">"Explain dependency injection in one sentence."</span></span>
+<span class="cl auto-step" style="--step:3">}, timeout: <span class="t">TimeSpan</span>.<span class="f">FromMinutes</span>(3));</span>
+<span class="cl">&nbsp;</span>
+<span class="cl auto-step" style="--step:4"><span class="k">if</span> (<span class="k">string</span>.<span class="f">IsNullOrWhiteSpace</span>(response?.Data.Content))</span>
+<span class="cl auto-step" style="--step:5">    <span class="k">throw new</span> <span class="t">InvalidOperationException</span>(<span class="s">"The session returned no assistant answer."</span>);</span>
+<span class="cl">&nbsp;</span>
+<span class="cl auto-step" style="--step:6"><span class="t">Console</span>.<span class="f">WriteLine</span>(response.Data.Content);</span>
+    </div>
+    <p class="body reveal d3" style="margin-top:30px;font-size:26px">A timeout stops this wait, not necessarily the agent. These short-lived examples dispose the session and client on exit.</p>
   </div>
 </section>
 
@@ -455,11 +504,11 @@ body.editing .slide [contenteditable]{outline:1px dashed rgba(63,185,80,.5);outl
     <div class="kicker reveal">Debrief · Lab 01</div>
     <h2 class="reveal d1" style="margin-top:36px;font-size:100px">Four things<br>just happened.</h2>
     <div style="position:absolute;right:170px;top:150px;width:800px">
-      <div class="biglist">
-        <div class="row frag"><div class="num">01</div><div><div class="txt">Client</div><div class="sub">Our connection to the Copilot runtime.</div></div></div>
-        <div class="row frag"><div class="num">02</div><div><div class="txt">Session</div><div class="sub">Not an HTTP wrapper. It has state. An ongoing conversation.</div></div></div>
-        <div class="row frag"><div class="num">03</div><div><div class="txt">Message</div><div class="sub">One prompt into the session.</div></div></div>
-        <div class="row frag"><div class="num">04</div><div><div class="txt">Response</div><div class="sub"><strong style="color:var(--text)">SendAndWaitAsync</strong> waits until the agent is <em>idle</em>, not for one model completion.</div></div></div>
+      <div class="biglist auto-flow">
+        <div class="row" style="--step:0"><div class="num">01</div><div><div class="txt">Client</div><div class="sub">Our connection to the Copilot runtime.</div></div></div>
+        <div class="row" style="--step:2"><div class="num">02</div><div><div class="txt">Session</div><div class="sub">Not an HTTP wrapper. It has state. An ongoing conversation.</div></div></div>
+        <div class="row" style="--step:4"><div class="num">03</div><div><div class="txt">Message</div><div class="sub">One prompt into the session.</div></div></div>
+        <div class="row" style="--step:6"><div class="num">04</div><div><div class="txt">Response</div><div class="sub"><strong style="color:var(--text)">SendAndWaitAsync</strong> waits until <em>idle</em>, not for one model completion. Idle means processing stopped, not that the task succeeded.</div></div></div>
       </div>
     </div>
   </div>
@@ -472,13 +521,13 @@ body.editing .slide [contenteditable]{outline:1px dashed rgba(63,185,80,.5);outl
   <div class="pad">
     <div class="kicker reveal">State</div>
     <h2 class="reveal d1" style="margin-top:36px">A session<br><span class="g">remembers.</span></h2>
-    <p class="body reveal d3" style="margin-top:56px;max-width:640px">“My name is Fred.” … “What is my name?”<br><br>No manual replay. The session maintains conversation state, tool state and planning context, which becomes essential once tools enter the picture.</p>
+    <p class="body reveal d3" style="margin-top:56px;max-width:640px">“My name is Frederiek.” … “What is my name?”<br><br>No manual replay. The session maintains conversation history, tool-call results and planning context. <strong>It does not preserve arbitrary application memory.</strong></p>
     <div style="position:absolute;right:190px;top:150px;bottom:160px;display:flex;align-items:center">
       <div class="flow v" style="gap:0">
         <div class="node n-purple reveal d2">MESSAGE 1</div>
         <div class="cv g draw reveal d3"></div>
         <div class="node n-green reveal d3" style="flex-direction:column;gap:12px;padding:40px 70px">SESSION
-          <small style="line-height:1.8">conversation<br>tool state<br>planning</small>
+          <small style="line-height:1.8">conversation<br>tool results<br>planning</small>
         </div>
         <div class="cv g draw reveal d4"></div>
         <div class="node n-purple reveal d4">MESSAGE 2</div>
@@ -494,56 +543,99 @@ body.editing .slide [contenteditable]{outline:1px dashed rgba(63,185,80,.5);outl
   <div class="pad">
     <div class="kicker reveal">Multi-step loops</div>
     <h2 class="reveal d1" style="margin-top:36px;font-size:96px">One message can<br>cause <span class="g">many actions.</span></h2>
-    <p class="body reveal d3" style="position:absolute;left:150px;bottom:170px;max-width:620px">The loop continues until Copilot decides it's finished. The abstraction isn't “call model”. It's <strong>“run this task until the agent becomes idle.”</strong></p>
-    <div style="position:absolute;right:140px;top:110px;bottom:120px;display:flex;align-items:center">
-      <div style="display:grid;grid-template-columns:auto auto;gap:0 60px;align-items:center">
-        <div class="flow v" style="gap:0">
-          <div class="node n-purple frag">USER</div>
-          <div class="cv frag"></div>
-          <div class="node n-blue frag">MODEL</div>
-          <div class="cv frag"></div>
-          <div class="node n-ghost n-grey frag" style="font-size:23px">NEED A TOOL?</div>
-          <div class="cv g frag"></div>
-          <div class="node n-amber frag">TOOL</div>
-          <div class="cv g frag"></div>
-          <div class="node n-grey frag">RESULT</div>
-          <div class="cv g frag"></div>
-          <div class="node n-blue frag">MODEL&nbsp;&nbsp;<small style="display:inline;color:var(--green)">↺</small></div>
-        </div>
-        <div class="flow v frag" style="gap:0;align-self:start;margin-top:244px">
-          <div class="clabel" style="margin-bottom:10px">no&nbsp;→</div>
-          <div class="node n-green">ANSWER</div>
-        </div>
-      </div>
+    <p class="body reveal d3" style="position:absolute;left:150px;bottom:170px;max-width:620px;font-size:29px">The runtime sends context to the model. The model returns a tool call or a final answer. The runtime executes calls and sends results back.<br><br><strong>Idle means processing stopped, not proof of success.</strong></p>
+    <div class="loop-canvas">
+      <svg class="loop-arrows" viewBox="0 0 850 850" role="img" aria-label="The user prompts the agent runtime. The runtime sends context and tool results to the model, which returns tool calls or an answer. The runtime executes tools and receives their results, repeating model requests until it can return the final answer.">
+        <defs>
+          <marker id="loop-green" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto"><polygon points="0,0 8,4 0,8" fill="var(--green)"/></marker>
+          <marker id="loop-blue" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto"><polygon points="0,0 8,4 0,8" fill="var(--blue)"/></marker>
+          <marker id="loop-purple" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto"><polygon points="0,0 8,4 0,8" fill="var(--purple)"/></marker>
+        </defs>
+        <g class="auto-step" style="--step:1">
+          <path d="M275 105 V270" stroke="var(--purple)" marker-end="url(#loop-purple)"/>
+          <text x="300" y="190">prompt</text>
+        </g>
+        <g class="auto-step" style="--step:4">
+          <path d="M425 295 H560" stroke="var(--green)" marker-end="url(#loop-green)"/>
+          <text x="495" y="235" text-anchor="middle">context + results</text>
+        </g>
+        <g class="auto-step" style="--step:7">
+          <path d="M560 350 H425" stroke="var(--blue)" marker-end="url(#loop-blue)"/>
+          <text x="495" y="410" text-anchor="middle">tool call / answer</text>
+        </g>
+        <g class="auto-step" style="--step:9">
+          <path d="M225 370 V610" stroke="var(--green)" marker-end="url(#loop-green)"/>
+          <text x="195" y="500" text-anchor="end">execute</text>
+        </g>
+        <g class="auto-step" style="--step:12">
+          <path d="M325 610 V370" stroke="var(--green)" marker-end="url(#loop-green)"/>
+          <text x="355" y="500">tool result</text>
+        </g>
+        <g class="auto-step" style="--step:14">
+          <path d="M125 320 H40 V790 H125" stroke="var(--green)" marker-end="url(#loop-green)"/>
+          <text x="60" y="700">final</text>
+          <text x="60" y="725">answer</text>
+        </g>
+      </svg>
+      <div class="node n-purple loop-node auto-step" style="--step:0;left:125px;top:25px;height:80px">USER</div>
+      <div class="node n-green loop-node auto-step" style="--step:2;left:125px;top:270px">AGENT RUNTIME<small>context · execution</small></div>
+      <div class="node n-blue loop-node auto-step" style="--step:5;left:560px;top:270px;width:250px">MODEL<small>next action</small></div>
+      <div class="node n-amber loop-node auto-step" style="--step:10;left:125px;top:610px;height:85px">TOOLS</div>
+      <div class="node n-green loop-node auto-step" style="--step:15;left:125px;top:750px;height:80px">ANSWER</div>
+      <p class="body auto-step" style="--step:13;position:absolute;left:530px;top:600px;width:290px;font-size:25px">Model proposes.<br>Runtime executes.<br>Results go back<br>to the model.</p>
     </div>
   </div>
 </section>
 
-<!-- ============================================================
-     SLIDE 11 - STREAMING & EVENTS
-     ============================================================ -->
+<!-- === STREAMING CONFIGURATION: pair with the following subscription === -->
+<section class="slide" data-name="streaming-config">
+  <div class="pad">
+    <div class="kicker reveal">Presenter demo · Streaming configuration</div>
+    <h2 class="reveal d1" style="margin-top:36px;font-size:88px">Enable <span class="g">the stream.</span></h2>
+    <div class="code sm reveal d2" data-code="streaming-config" style="margin-top:50px;line-height:1.6">
+<span class="cl"><span class="k">using</span> <span class="t">GitHub.Copilot</span>;</span>
+<span class="cl"><span class="k">using</span> <span class="t">Workshop.Tools</span>;</span>
+<span class="cl"><span class="k">await using var</span> client = <span class="k">new</span> <span class="t">CopilotClient</span>();</span>
+<span class="cl"><span class="k">var</span> tools = <span class="k">new</span>[] { <span class="t">ToolCatalog</span>.<span class="f">ServiceStatus</span>(), <span class="t">ToolCatalog</span>.<span class="f">Incidents</span>() };</span>
+<span class="cl"><span class="k">await using var</span> session = <span class="k">await</span> client.<span class="f">CreateSessionAsync</span>(<span class="k">new</span> <span class="t">SessionConfig</span></span>
+<span class="cl">{</span>
+<span class="cl">    Model = <span class="s">"auto"</span>,</span>
+<span class="cl">    Tools = [.. tools],</span>
+<span class="cl">    AvailableTools = tools.<span class="f">Select</span>(tool =&gt; tool.Name).<span class="f">ToList</span>(),</span>
+<span class="cl frag" data-hl>    Streaming = <span class="k">true</span>,</span>
+<span class="cl">    OnPermissionRequest = <span class="t">PermissionHandler</span>.<span class="f">ApproveAll</span></span>
+<span class="cl">});</span>
+    </div>
+    <p class="body reveal d3" style="margin-top:26px;font-size:26px">Configure first. Subscribe next. Send last. The demo uses fictional, read-only service and incident data.</p>
+  </div>
+</section>
+
+<!-- === STREAMING & EVENTS: continuation of streaming-config === -->
 <section class="slide" data-name="events">
   <div class="pad">
     <div class="kicker reveal">The loop is observable</div>
-    <h2 class="reveal d1" style="margin-top:36px;font-size:92px">Don't stare<br>at a spinner.</h2>
-    <p class="body reveal d3" style="margin-top:50px;max-width:620px">The SDK emits session events: thinking, writing, running tools. Stream deltas, observe tool activity, react to lifecycle changes. <strong>Essential for a real UI.</strong></p>
-    <div style="position:absolute;right:150px;top:130px;width:820px">
-      <div class="mt reveal d2" style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:36px 50px;font-size:26px;line-height:2.1">
-        <span class="m">session.start</span><br>
-        <span style="color:var(--blue)">assistant.delta</span><br>
-        <span style="color:var(--amber)">tool.execution</span><br>
-        <span style="color:var(--blue)">assistant.delta</span><br>
+    <h2 class="reveal d1" style="margin-top:36px;font-size:86px">Don't stare<br>at a spinner.</h2>
+    <p class="body reveal d3" style="margin-top:50px;max-width:520px;font-size:29px">Stream response deltas, observe tool execution and report errors. <strong>Subscribe before sending.</strong></p>
+    <div style="position:absolute;right:150px;top:130px;width:1000px">
+      <div class="mt reveal d2" style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:24px 44px;font-size:26px;line-height:1.6">
+        <span style="color:var(--blue)">assistant.message_delta</span><br>
+        <span style="color:var(--amber)">tool.execution_start</span><br>
+        <span style="color:var(--amber)">tool.execution_complete</span><br>
+        <span style="color:var(--blue)">assistant.message_delta</span><br>
         <span class="g">session.idle</span>
       </div>
-      <div class="code sm frag" style="margin-top:36px">
-<span class="cl">session.<span class="f">On</span>&lt;<span class="t">SessionEvent</span>&gt;(ev =&gt;</span>
+      <div class="code sm reveal d4" data-code="streaming-subscribe" style="margin-top:26px;padding:32px 44px;line-height:1.6">
+<span class="cl"><span class="k">using var</span> events = session.<span class="f">On</span>&lt;<span class="t">SessionEvent</span>&gt;(ev =&gt;</span>
 <span class="cl">{</span>
-<span class="cl">    <span class="k">if</span> (ev <span class="k">is</span> <span class="t">AssistantMessageDeltaEvent</span> delta)</span>
-<span class="cl">        <span class="t">Console</span>.<span class="f">Write</span>(delta.Data.DeltaContent);</span>
-<span class="cl">&nbsp;</span>
+<span class="cl">    <span class="k">if</span> (ev <span class="k">is</span> <span class="t">AssistantMessageDeltaEvent</span> d)</span>
+<span class="cl">        <span class="t">Console</span>.<span class="f">Write</span>(d.Data.DeltaContent);</span>
+<span class="cl">    <span class="k">if</span> (ev <span class="k">is</span> <span class="t">SessionErrorEvent</span> error)</span>
+<span class="cl">        <span class="t">Console</span>.Error.<span class="f">WriteLine</span>(error.Data.Message);</span>
 <span class="cl">    <span class="k">if</span> (ev <span class="k">is</span> <span class="t">SessionIdleEvent</span>)</span>
 <span class="cl">        <span class="t">Console</span>.<span class="f">WriteLine</span>();</span>
 <span class="cl">});</span>
+<span class="cl"><span class="k">var</span> prompt = <span class="s">"Why might checkout be unavailable?"</span>;</span>
+<span class="cl"><span class="k">await</span> <span class="t">WorkshopSession</span>.<span class="f">Ask</span>(session, prompt);</span>
       </div>
     </div>
   </div>
@@ -560,8 +652,8 @@ body.editing .slide [contenteditable]{outline:1px dashed rgba(63,185,80,.5);outl
       <div class="node n-green">COPILOT</div><div class="ch"></div>
       <div class="node n-grey">TEXT</div>
     </div>
-    <p class="body frag" style="margin-top:70px;font-size:36px">That's useful. <strong>But not very agentic.</strong><br>Ask “Is our API build healthy?” and Copilot has absolutely no reason to know.</p>
-    <p class="statement frag" style="margin-top:80px">Give it something<br>it can <span class="g">do.</span></p>
+    <p class="body reveal d3" style="margin-top:70px;font-size:34px">Lab 1 deliberately allowed no tools. <strong>The agent loop was already there.</strong><br>But it had no capability for looking up our build health.</p>
+    <p class="statement reveal d4" style="margin-top:70px">Give it a<br><span class="g">domain capability.</span></p>
   </div>
 </section>
 
@@ -583,9 +675,9 @@ body.editing .slide [contenteditable]{outline:1px dashed rgba(63,185,80,.5);outl
         </div>
       </div>
       <div>
-        <p class="body frag" style="font-size:33px"><strong>We don't call the tool from the prompt.</strong></p>
-        <p class="body frag" style="font-size:33px;margin-top:30px">We <span class="g" style="font-weight:600">expose</span> it.</p>
-        <p class="body frag" style="font-size:33px;margin-top:30px">The model decides whether it needs it.<br><span style="font-size:27px">That's the conceptual leap.</span></p>
+        <p class="body reveal d2" style="font-size:33px"><strong>We don't call the tool from the prompt.</strong></p>
+        <p class="body reveal d3" style="font-size:33px;margin-top:30px">We <span class="g" style="font-weight:600">expose</span> it.</p>
+        <p class="body reveal d4" style="font-size:33px;margin-top:30px">The model decides whether it needs it.<br><span style="font-size:27px">That's the conceptual leap.</span></p>
       </div>
     </div>
   </div>
@@ -597,42 +689,54 @@ body.editing .slide [contenteditable]{outline:1px dashed rgba(63,185,80,.5);outl
 <section class="slide" data-name="define-tool">
   <div class="pad">
     <div class="kicker reveal">Demo · <span class="g">CopilotTool.DefineTool</span></div>
-    <div class="code sm reveal d2" style="margin-top:60px;max-width:1560px">
-<span class="cl frag" data-hl><span class="k">var</span> <span class="n">getBuildStatus</span> = <span class="t">CopilotTool</span>.<span class="f">DefineTool</span>(</span>
-<span class="cl frag" data-hl>    ([<span class="t">Description</span>(<span class="s">"Project name"</span>)] <span class="k">string</span> project) =&gt;</span>
-<span class="cl frag" data-hl>    {</span>
-<span class="cl frag" data-hl>        <span class="k">return</span> project.<span class="f">ToLowerInvariant</span>() <span class="k">switch</span></span>
-<span class="cl frag" data-hl>        {</span>
-<span class="cl frag" data-hl>            <span class="s">"frontend"</span> =&gt; <span class="k">new</span> { project, status = <span class="s">"passing"</span> },</span>
-<span class="cl frag" data-hl>            <span class="s">"api"</span>      =&gt; <span class="k">new</span> { project, status = <span class="s">"failing"</span> },</span>
-<span class="cl frag" data-hl>            <span class="s">"database"</span> =&gt; <span class="k">new</span> { project, status = <span class="s">"passing"</span> },</span>
-<span class="cl frag" data-hl>            _          =&gt; <span class="k">new</span> { project, status = <span class="s">"unknown"</span> }</span>
-<span class="cl frag" data-hl>        };</span>
-<span class="cl frag" data-hl>    },</span>
-<span class="cl frag" data-hl>    factoryOptions: <span class="k">new</span> <span class="t">AIFunctionFactoryOptions</span></span>
-<span class="cl frag" data-hl>    {</span>
-<span class="cl frag" data-hl>        Name = <span class="s">"get_build_status"</span>,</span>
-<span class="cl frag" data-hl>        Description = <span class="s">"Gets the current build status for a project."</span></span>
-<span class="cl frag" data-hl>    });</span>
+    <div class="code sm reveal d2" data-code="tool-definition" style="margin-top:42px;max-width:1560px;font-size:26px;line-height:1.5;padding:32px 48px">
+<span class="cl"><span class="k">using</span> <span class="t">GitHub.Copilot</span>;</span>
+<span class="cl"><span class="k">using</span> <span class="t">Microsoft.Extensions.AI</span>;</span>
+<span class="cl"><span class="k">using</span> <span class="t">System.ComponentModel</span>;</span>
+<span class="cl auto-step" style="--step:0"><span class="k">var</span> <span class="n">getBuildStatus</span> = <span class="t">CopilotTool</span>.<span class="f">DefineTool</span>(</span>
+<span class="code-focus frag" data-hl>
+<span class="cl auto-step" style="--step:1">    ([<span class="t">Description</span>(<span class="s">"Project: frontend, api, or database."</span>)] <span class="k">string</span> project) =&gt;</span>
+<span class="cl auto-step" style="--step:2">    {</span>
+<span class="cl auto-step" style="--step:3">        <span class="t">ArgumentException</span>.<span class="f">ThrowIfNullOrWhiteSpace</span>(project);</span>
+<span class="cl auto-step" style="--step:4">        <span class="k">return</span> project.<span class="f">Trim</span>().<span class="f">ToLowerInvariant</span>() <span class="k">switch</span></span>
+<span class="cl auto-step" style="--step:5">        {</span>
+<span class="cl auto-step" style="--step:6">            <span class="s">"frontend"</span> =&gt; <span class="k">new</span> { project, status = <span class="s">"passing"</span> },</span>
+<span class="cl auto-step" style="--step:7">            <span class="s">"api"</span>      =&gt; <span class="k">new</span> { project, status = <span class="s">"failing"</span> },</span>
+<span class="cl auto-step" style="--step:8">            <span class="s">"database"</span> =&gt; <span class="k">new</span> { project, status = <span class="s">"passing"</span> },</span>
+<span class="cl auto-step" style="--step:9">            _ =&gt; <span class="k">throw new</span> <span class="t">ArgumentException</span>(<span class="s">"Unknown project."</span>)</span>
+<span class="cl auto-step" style="--step:10">        };</span>
+<span class="cl auto-step" style="--step:11">    },</span>
+</span>
+<span class="code-focus frag" data-hl>
+<span class="cl auto-step" style="--step:12">    factoryOptions: <span class="k">new</span> <span class="t">AIFunctionFactoryOptions</span></span>
+<span class="cl auto-step" style="--step:13">    {</span>
+<span class="cl auto-step" style="--step:14">        Name = <span class="s">"get_build_status"</span>,</span>
+<span class="cl auto-step" style="--step:15">        Description = <span class="s">"Gets the current build status for a project."</span></span>
+<span class="cl auto-step" style="--step:16">    });</span>
+</span>
     </div>
   </div>
 </section>
 
 <!-- ============================================================
-     SLIDE 15 - DEMO: REGISTER THE TOOL
+     SLIDE 18 - DEMO: REGISTER THE TOOL
      ============================================================ -->
 <section class="slide" data-name="register-tool">
   <div class="pad">
     <div class="kicker reveal">Demo · One line changes everything</div>
-    <div class="code reveal d2" style="margin-top:80px;max-width:1420px">
+    <div class="code sm reveal d2" data-code="tool-registration" style="margin-top:80px;max-width:1500px">
+<span class="cl"><span class="k">await using var</span> client = <span class="k">new</span> <span class="t">CopilotClient</span>();</span>
 <span class="cl"><span class="k">await using var</span> <span class="n">session</span> = <span class="k">await</span> client.<span class="f">CreateSessionAsync</span>(<span class="k">new</span> <span class="t">SessionConfig</span></span>
 <span class="cl">{</span>
 <span class="cl">    Model = <span class="s">"auto"</span>,</span>
 <span class="cl">    OnPermissionRequest = <span class="t">PermissionHandler</span>.<span class="f">ApproveAll</span>,</span>
-<span class="cl frag" data-hl>    Tools = [getBuildStatus]</span>
+<span class="cl auto-step" style="--step:2">    Tools = [getBuildStatus],</span>
+<span class="code-focus frag" data-hl>
+<span class="cl auto-step" style="--step:4">    AvailableTools = [<span class="s">"get_build_status"</span>]</span>
+</span>
 <span class="cl">});</span>
     </div>
-    <p class="body frag" style="margin-top:70px;max-width:1000px;font-size:33px">The session now starts with a <span style="color:var(--amber)">capability</span>.<br>We never tell it when to use it.</p>
+    <p class="body auto-step" style="--step:6;margin-top:48px;max-width:1350px;font-size:31px">Register the implementation. Allow only that <span style="color:var(--amber)">capability</span>.<br>The agent chooses when to call it. Our code still validates inputs and enforces access.</p>
   </div>
 </section>
 
@@ -641,35 +745,36 @@ body.editing .slide [contenteditable]{outline:1px dashed rgba(63,185,80,.5);outl
      ============================================================ -->
 <section class="slide" data-name="tool-call-anim">
   <div class="pad">
-    <div class="kicker reveal">“Which projects are currently failing?”</div>
-    <div style="position:absolute;left:150px;right:150px;top:230px;bottom:150px;display:flex;align-items:center;justify-content:center">
-      <div style="display:grid;grid-template-columns:auto auto auto;gap:50px 90px;align-items:center">
+    <div class="kicker reveal" style="font-size:21px;letter-spacing:.12em">“Which of frontend, api and database currently have failing builds?”</div>
+    <div class="clabel reveal d1" style="position:absolute;left:150px;top:330px;max-width:600px;line-height:1.7">One possible execution.<br>Tool order is not guaranteed.</div>
+    <div style="position:absolute;left:150px;right:150px;top:230px;bottom:150px">
+      <div class="auto-flow" style="position:absolute;right:0;top:0;display:grid;grid-template-columns:auto 90px auto;gap:0;align-items:center">
         <!-- row 1 -->
-        <div class="node n-purple frag">USER</div>
-        <div class="ch frag" style="width:90px"></div>
-        <div class="node n-green frag" style="flex-direction:column;gap:6px">AGENT<small>"I need build information."</small></div>
+        <div class="node n-purple" style="--step:0">USER</div>
+        <div class="ch" style="--step:1;width:90px"></div>
+        <div class="node n-green" style="--step:2;flex-direction:column;gap:6px">AGENT<small>"I need build information."</small></div>
         <!-- row 2: first tool call -->
-        <div class="frag" style="grid-column:3"><div class="flow v" style="gap:0">
+        <div style="--step:4;grid-column:3"><div class="flow v" style="gap:0">
           <div class="cv g"></div>
           <div class="node n-amber" style="font-size:23px">get_build_status(<span style="color:var(--muted)">"frontend"</span>)</div>
           <div class="cv"></div>
           <div class="node n-grey" style="font-size:23px;color:var(--green);border-color:var(--green-dim)">passing</div>
         </div></div>
         <!-- row 3: second tool call -->
-        <div class="frag" style="grid-column:3"><div class="flow v" style="gap:0">
+        <div style="--step:8;grid-column:3"><div class="flow v" style="gap:0">
           <div class="cv g"></div>
           <div class="node n-amber" style="font-size:23px">get_build_status(<span style="color:var(--muted)">"api"</span>)</div>
           <div class="cv"></div>
           <div class="node" style="font-size:23px;color:var(--red);border-color:rgba(248,81,73,.5)">failing</div>
         </div></div>
         <!-- row 4: answer -->
-        <div class="frag" style="grid-column:3"><div class="flow v" style="gap:0">
+        <div style="--step:12;grid-column:3"><div class="flow v" style="gap:0">
           <div class="cv g"></div>
           <div class="node n-green">ANSWER</div>
         </div></div>
       </div>
     </div>
-    <p class="body frag" style="position:absolute;left:150px;bottom:140px;max-width:680px">No <span style="font-family:var(--font-mono);font-size:25px">if prompt contains "build"</span>. No workflow engine. We gave Copilot a capability and a description. <strong>The agent decides how to use it.</strong></p>
+    <p class="body auto-step" style="--step:14;position:absolute;left:150px;bottom:150px;max-width:680px;font-size:28px">The prompt supplies the project set; the tool supplies facts. This excerpt shows two calls, not an exhaustive trace.<br><br><strong>Tool selection is agentic. Evidence and validation stay explicit.</strong></p>
   </div>
 </section>
 
@@ -685,7 +790,7 @@ body.editing .slide [contenteditable]{outline:1px dashed rgba(63,185,80,.5);outl
       <div class="lab-goal reveal d2">
         <div class="lbl">GOAL</div>
         <p class="body" style="font-size:28px">Implement <span style="font-family:var(--font-mono);color:var(--amber)">get_service_status(service)</span> and ask:</p>
-        <p class="body" style="font-size:29px;margin-top:24px;color:var(--text)">“Why might checkout currently be unavailable?”</p>
+        <p class="body" style="font-size:29px;margin-top:24px;color:var(--text)">“Are checkout, payments and catalog healthy right now?”</p>
         <div class="hr" style="margin:36px 0"></div>
         <div class="mt" style="font-size:25px">
           checkout <span class="arr">→</span> <span style="color:var(--amber)">degraded</span><br>
@@ -695,9 +800,10 @@ body.editing .slide [contenteditable]{outline:1px dashed rgba(63,185,80,.5);outl
       </div>
       <div class="lab-goal reveal d3" style="margin-top:32px;border-style:dashed">
         <div class="lbl" style="color:var(--muted)">BONUS</div>
-        <p class="body" style="font-size:27px">Add <span style="font-family:var(--font-mono);color:var(--amber)">get_incidents(service)</span>, then ask a question where Copilot has to decide which capabilities it needs.</p>
+        <p class="body" style="font-size:27px">Add <span style="font-family:var(--font-mono);color:var(--amber)">get_incidents(service)</span>. Then ask why checkout might be unavailable. <strong>Degraded health alone is not a root cause.</strong></p>
       </div>
     </div>
+    <p class="body reveal d4" style="position:absolute;left:150px;top:560px;width:640px;font-size:28px">Extend your Lab 1 app.<br><br>Register the tool and allow only its name in <span class="g" style="font-family:var(--font-mono)">AvailableTools</span>.<br><br>Log calls. Ground the answer in tool results.</p>
   </div>
 </section>
 
@@ -718,28 +824,56 @@ body.editing .slide [contenteditable]{outline:1px dashed rgba(63,185,80,.5);outl
 <section class="slide" data-name="already-agent">
   <div class="pad">
     <div class="kicker reveal">Zooming out</div>
-    <div style="position:absolute;left:150px;top:260px">
-      <div style="display:grid;grid-template-columns:auto auto auto auto auto;gap:0;align-items:center">
-        <div class="node n-purple reveal d1">USER</div>
-        <div class="ch draw reveal d2"></div>
-        <div class="node reveal d2">SESSION</div>
-        <div class="ch g draw reveal d3"></div>
-        <div style="display:flex;flex-direction:column;gap:30px">
-          <div class="flow reveal d3" style="gap:0"><div class="node n-green">AGENT LOOP</div></div>
-        </div>
-      </div>
-      <div style="display:flex;gap:40px;margin-left:640px;margin-top:40px">
-        <div class="flow v reveal d4" style="gap:0"><div class="cv g"></div><div class="node n-blue">MODEL</div></div>
-        <div class="flow v reveal d4" style="gap:0"><div class="cv g"></div><div class="node n-amber">TOOLS</div></div>
-      </div>
+    <h2 class="reveal d1" style="margin-top:70px;font-size:112px;max-width:650px">This is already<br>an <span class="g">agent.</span></h2>
+    <p class="body reveal d3" style="position:absolute;left:150px;bottom:170px;max-width:620px;font-size:29px">An objective. A session holding context. A model deciding what to do next. Tools that return evidence. A runtime that manages execution.<br><br><strong>Evaluate the outcome, not just the idle event.</strong></p>
+    <div class="loop-canvas">
+      <svg class="loop-arrows" viewBox="0 0 850 850" role="img" aria-label="A user supplies an objective through a session containing conversation history and tool results. The agent runtime exchanges context and decisions with the model, executes tools and receives their results, then returns an answer.">
+        <defs>
+          <marker id="overview-green" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto"><polygon points="0,0 8,4 0,8" fill="var(--green)"/></marker>
+          <marker id="overview-blue" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto"><polygon points="0,0 8,4 0,8" fill="var(--blue)"/></marker>
+          <marker id="overview-purple" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto"><polygon points="0,0 8,4 0,8" fill="var(--purple)"/></marker>
+        </defs>
+        <g class="auto-step" style="--step:1">
+          <path d="M275 105 V140" stroke="var(--purple)" marker-end="url(#overview-purple)"/>
+        </g>
+        <g class="auto-step" style="--step:3">
+          <path d="M275 230 V270" stroke="var(--green)" marker-end="url(#overview-green)"/>
+        </g>
+        <g class="auto-step" style="--step:5">
+          <path d="M425 295 H560" stroke="var(--green)" marker-end="url(#overview-green)"/>
+          <text x="495" y="255" text-anchor="middle">context + results</text>
+        </g>
+        <g class="auto-step" style="--step:7">
+          <path d="M560 350 H425" stroke="var(--blue)" marker-end="url(#overview-blue)"/>
+          <text x="495" y="410" text-anchor="middle">tool call / answer</text>
+        </g>
+        <g class="auto-step" style="--step:9">
+          <path d="M225 370 V610" stroke="var(--green)" marker-end="url(#overview-green)"/>
+          <text x="195" y="500" text-anchor="end">execute</text>
+        </g>
+        <g class="auto-step" style="--step:12">
+          <path d="M325 610 V370" stroke="var(--green)" marker-end="url(#overview-green)"/>
+          <text x="355" y="500">tool result</text>
+        </g>
+        <g class="auto-step" style="--step:14">
+          <path d="M125 320 H40 V790 H125" stroke="var(--green)" marker-end="url(#overview-green)"/>
+          <text x="60" y="700">final</text>
+          <text x="60" y="725">answer</text>
+        </g>
+      </svg>
+      <div class="node n-purple loop-node auto-step" style="--step:0;left:125px;top:25px;height:80px">USER<small>objective / prompt</small></div>
+      <div class="node n-grey loop-node auto-step" style="--step:2;left:125px;top:140px;height:90px">SESSION<small>history · tool results</small></div>
+      <div class="node n-green loop-node auto-step" style="--step:4;left:125px;top:270px">AGENT RUNTIME<small>context · execution</small></div>
+      <div class="node n-blue loop-node auto-step" style="--step:6;left:560px;top:270px;width:250px">MODEL<small>next action</small></div>
+      <div class="node n-amber loop-node auto-step" style="--step:10;left:125px;top:610px;height:85px">TOOLS</div>
+      <div class="node n-green loop-node auto-step" style="--step:15;left:125px;top:750px;height:80px">ANSWER</div>
+      <p class="body auto-step" style="--step:13;position:absolute;left:530px;top:600px;width:290px;font-size:25px">The loop was there<br>from the first session.<br>Now it can use<br>your capabilities.</p>
     </div>
-    <p class="statement frag" style="position:absolute;left:150px;bottom:170px;font-size:120px">This is already<br>an <span class="g">agent.</span></p>
-    <p class="body frag" style="position:absolute;right:150px;bottom:180px;max-width:560px">An objective. A model deciding what to do next. Tools that touch the outside world. A loop that runs until it finishes.</p>
   </div>
 </section>
 
 <!-- ============================================================
-     SLIDE 20 - MULTIPLE CAPABILITIES
+     SLIDE 23 - MULTIPLE CAPABILITIES
      ============================================================ -->
 <section class="slide" data-name="multi-capabilities">
   <div class="pad">
@@ -759,22 +893,22 @@ body.editing .slide [contenteditable]{outline:1px dashed rgba(63,185,80,.5);outl
       </div>
     </div>
     <div style="position:absolute;right:150px;top:330px;width:560px">
-      <div class="mt frag" style="font-size:26px;line-height:2.2">
+      <div class="mt auto-step" style="--step:5;font-size:26px;line-height:2.2">
         deployment_status <span class="arr">→</span> <span style="color:var(--red)">blocked</span>
       </div>
-      <div class="mt frag" style="font-size:26px;line-height:2.2">
+      <div class="mt auto-step" style="--step:7;font-size:26px;line-height:2.2">
         build_status <span class="arr">→</span> <span class="g">passing</span>
       </div>
-      <div class="mt frag" style="font-size:26px;line-height:2.2">
+      <div class="mt auto-step" style="--step:9;font-size:26px;line-height:2.2">
         pull_requests <span class="arr">→</span> <span style="color:var(--amber)">1 blocking PR</span>
       </div>
-      <p class="body frag" style="margin-top:40px;font-size:27px"><strong>We didn't encode that order.</strong> On a different problem, it might choose a different path.</p>
+      <p class="body auto-step" style="--step:11;margin-top:40px;font-size:27px"><strong>One possible trace, not a required order.</strong> The demo's fixtures provide the evidence. Missing evidence must stay unknown.</p>
     </div>
   </div>
 </section>
 
 <!-- ============================================================
-     SLIDE 21 - TOOL DESIGN
+     SLIDE 24 - TOOL DESIGN
      ============================================================ -->
 <section class="slide" data-name="tool-design">
   <div class="pad">
@@ -786,71 +920,21 @@ body.editing .slide [contenteditable]{outline:1px dashed rgba(63,185,80,.5);outl
         <div class="node n-ghost reveal d2" style="margin-top:24px;border-color:rgba(248,81,73,.5);color:var(--muted);font-size:30px">manage_project()</div>
       </div>
       <div class="hr" style="margin:50px 0"></div>
-      <div class="frag">
+      <div class="auto-step" style="--step:4">
         <div class="kicker g" style="letter-spacing:.3em">BETTER</div>
         <div style="display:flex;flex-direction:column;gap:18px;margin-top:24px;align-items:flex-start">
           <div class="node n-amber" style="font-size:26px">get_build_status()</div>
           <div class="node n-amber" style="font-size:26px">get_deployment_status()</div>
-          <div class="node n-amber" style="font-size:26px">restart_service()</div>
+          <div class="node n-amber" style="font-size:26px">get_incidents()</div>
         </div>
       </div>
     </div>
-    <p class="body frag" style="position:absolute;left:150px;bottom:160px;max-width:800px">Names and descriptions are how the model chooses. Return structured, predictable results. <strong>The model reasons over the result. The tool does the deterministic part.</strong><br><br><span style="font-size:26px">Same principle as deterministic guardrails: let AI handle ambiguity, let normal code handle what normal code is better at.</span></p>
+    <p class="body auto-step" style="--step:7;position:absolute;left:150px;bottom:160px;max-width:800px">Names and descriptions are how the model chooses. Return structured, predictable results. <strong>The model reasons over the result. The tool does the deterministic part.</strong><br><br><span style="font-size:26px">Same principle as deterministic guardrails: let AI handle ambiguity, let normal code handle what normal code is better at.</span></p>
   </div>
 </section>
 
 <!-- ============================================================
-     SLIDE 22 - LAB 03
-     ============================================================ -->
-<section class="slide" data-name="lab-3">
-  <div class="pad">
-    <div class="lab-num reveal">LAB 03</div>
-    <h2 class="reveal d1" style="margin-top:44px;font-size:104px">Build an<br><span class="g">investigator.</span></h2>
-    <div class="lab-time reveal d4" style="position:absolute;left:150px;bottom:160px"><span class="g">20</span> MIN</div>
-    <p class="body reveal d3" style="position:absolute;left:150px;bottom:260px;max-width:600px;font-size:26px">Pick one track. <strong>Hardcoded data is encouraged.</strong><br>Can you design capabilities that let the agent investigate the question?</p>
-    <div style="position:absolute;right:130px;top:130px;width:810px;display:flex;flex-direction:column;gap:26px">
-      <div class="lab-goal reveal d2" style="padding:34px 44px">
-        <div class="lbl">A · DEVOPS</div>
-        <div class="mt" style="font-size:23px;line-height:1.9">get_build_status · get_deployment_status · get_incidents</div>
-        <p class="body" style="font-size:25px;margin-top:16px;color:var(--text)">“Why is checkout unavailable?”</p>
-      </div>
-      <div class="lab-goal reveal d3" style="padding:34px 44px">
-        <div class="lbl">B · GITHUB</div>
-        <div class="mt" style="font-size:23px;line-height:1.9">get_repository · get_pull_requests · get_issues</div>
-        <p class="body" style="font-size:25px;margin-top:16px;color:var(--text)">“What should this team work on next?”</p>
-      </div>
-      <div class="lab-goal reveal d4" style="padding:34px 44px">
-        <div class="lbl">C · SUPPORT</div>
-        <div class="mt" style="font-size:23px;line-height:1.9">get_customer · get_orders · get_incidents</div>
-        <p class="body" style="font-size:25px;margin-top:16px;color:var(--text)">“Why is customer 123 unhappy?”</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ============================================================
-     SLIDE 23 - DEBRIEF LAB 3 / OBSERVABILITY
-     ============================================================ -->
-<section class="slide" data-name="debrief-3">
-  <div class="pad">
-    <div class="kicker reveal">Debrief · Lab 03</div>
-    <h2 class="reveal d1" style="margin-top:36px;font-size:88px">Did anyone's agent take<br>a path you didn't expect?</h2>
-    <div class="split2 frag" style="margin-top:100px;grid-template-columns:1fr 1px 1fr;gap:90px;height:auto">
-      <p class="body" style="font-size:31px">That's the blessing and the curse of agents: <strong>the workflow isn't predetermined.</strong></p>
-      <div class="vline"></div>
-      <div class="mt" style="font-size:27px;line-height:2.2">
-        <span class="m">what did it</span> <span class="g">call</span>,<br>
-        <span class="m">in what</span> <span class="g">order</span>,<br>
-        <span class="m">what came</span> <span class="g">back</span>,<br>
-        <span class="m">why did it</span> <span class="g">stop</span>?
-      </div>
-    </div>
-    <p class="body frag" style="position:absolute;left:150px;bottom:160px;font-size:29px">That's why <strong>observability</strong> becomes so important.</p>
-  </div>
-</section>
-
-<!-- ============================================================
-     SLIDE 24 - CUSTOM TOOL vs MCP
+     SLIDE 25 - CUSTOM TOOL vs MCP
      ============================================================ -->
 <section class="slide" data-name="mcp">
   <div class="pad">
@@ -868,19 +952,19 @@ body.editing .slide [contenteditable]{outline:1px dashed rgba(63,185,80,.5);outl
       <div>
         <div class="kicker" style="color:var(--blue);letter-spacing:.3em">MCP</div>
         <div class="mt" style="margin-top:40px;font-size:27px;line-height:2">
-          Capability exposed by <strong style="color:var(--text)">another service</strong><br>
-          <span class="m">Reusable / external</span><br>
+          Capability exposed by <strong style="color:var(--text)">another process or service</strong><br>
+          <span class="m">Local stdio / remote HTTP</span><br>
           <span class="m">Protocol boundary</span>
         </div>
       </div>
     </div>
     <div style="position:absolute;left:150px;bottom:150px">
       <div style="display:grid;grid-template-columns:auto auto auto auto auto;gap:0;align-items:center">
-        <div class="node frag">APP</div>
-        <div class="ch draw frag"></div>
-        <div class="node n-green frag">AGENT</div>
-        <div class="ch g draw frag" style="width:60px"></div>
-        <div class="branches frag" style="border-color:var(--green-dim);gap:16px">
+        <div class="node auto-step" style="--step:4">APP</div>
+        <div class="ch draw auto-step" style="--step:5"></div>
+        <div class="node n-green auto-step" style="--step:6">AGENT</div>
+        <div class="ch g draw auto-step" style="--step:7;width:60px"></div>
+        <div class="branches auto-step" style="--step:8;border-color:var(--green-dim);gap:16px">
           <div class="branch"><div class="stub"></div><div class="node n-amber" style="font-size:22px;padding:12px 26px">CUSTOM TOOL</div></div>
           <div class="branch"><div class="stub"></div><div class="node n-blue" style="font-size:22px;padding:12px 26px">GITHUB MCP</div></div>
           <div class="branch"><div class="stub"></div><div class="node n-blue" style="font-size:22px;padding:12px 26px">INTERNAL MCP</div></div>
@@ -888,13 +972,38 @@ body.editing .slide [contenteditable]{outline:1px dashed rgba(63,185,80,.5);outl
         </div>
       </div>
     </div>
-    <p class="body frag" style="position:absolute;right:150px;bottom:170px;max-width:600px">From the agent's perspective, <strong>both look like capabilities it can use.</strong> MCP isn't a new agent concept. It's another way of providing tools to the same loop.</p>
+    <p class="body auto-step" style="--step:10;position:absolute;right:150px;bottom:170px;max-width:600px">From the agent's perspective, <strong>both look like capabilities it can use.</strong> MCP isn't a new agent concept. It's another way of providing tools to the same loop.</p>
   </div>
 </section>
 
-<!-- ============================================================
-     SLIDE 25 - PERSISTENCE
-     ============================================================ -->
+<!-- === MCP CONFIGURATION: the existing local workshop server === -->
+<section class="slide" data-name="mcp-config">
+  <div class="pad">
+    <div class="kicker reveal" style="font-size:22px;letter-spacing:.2em">MCP · Local stdio</div>
+    <h2 class="reveal d1" style="margin-top:36px;font-size:84px;max-width:550px">Same loop.<br><span style="color:var(--blue)">A protocol<br>boundary.</span></h2>
+    <div class="code sm reveal d2" data-code="mcp-config" style="position:absolute;right:150px;top:120px;width:1040px;padding:32px 40px;font-size:25px;line-height:1.5">
+<span class="cl"><span class="k">var</span> config = <span class="t">WorkshopSession</span>.<span class="f">Configure</span>([]);</span>
+<span class="cl">config.McpServers = <span class="k">new</span> <span class="t">Dictionary</span>&lt;<span class="k">string</span>, <span class="t">McpServerConfig</span>&gt;</span>
+<span class="cl">{</span>
+<span class="cl">    [<span class="s">"workshop"</span>] = <span class="k">new</span> <span class="t">McpStdioServerConfig</span></span>
+<span class="cl">    {</span>
+<span class="cl">        Command = <span class="s">"dotnet"</span>,</span>
+<span class="cl">        Args = [server],</span>
+<span class="cl">        Tools = [<span class="s">"get_service_status"</span>, <span class="s">"get_incidents"</span>],</span>
+<span class="cl">        Timeout = 30_000</span>
+<span class="cl">    }</span>
+<span class="cl">};</span>
+<span class="cl">config.AvailableTools =</span>
+<span class="cl">    [<span class="s">"mcp:workshop-get_service_status"</span>,</span>
+<span class="cl">     <span class="s">"mcp:workshop-get_incidents"</span>];</span>
+<span class="cl"><span class="k">await using var</span> session =</span>
+<span class="cl">    <span class="k">await</span> client.<span class="f">CreateSessionAsync</span>(config);</span>
+    </div>
+    <p class="body reveal d3" style="position:absolute;left:150px;top:500px;width:470px;font-size:27px">Use the same imports and client as before.<br><br><span style="font-family:var(--font-mono)">server</span> is the validated absolute path to the compiled workshop MCP DLL.<br><br>Server-local tool names become <strong>source-qualified allowlist names.</strong></p>
+  </div>
+</section>
+
+<!-- === PERSISTENCE: evidence persists, executable callbacks do not === -->
 <section class="slide" data-name="persistence">
   <div class="pad">
     <div class="kicker reveal">Persistence</div>
@@ -910,7 +1019,7 @@ body.editing .slide [contenteditable]{outline:1px dashed rgba(63,185,80,.5);outl
           <div class="node n-green" style="font-size:23px">PERSIST</div>
         </div>
       </div>
-      <div class="frag">
+      <div class="auto-step" style="--step:5">
         <div class="kicker" style="font-size:21px;color:var(--green)">TOMORROW</div>
         <div class="flow v" style="gap:0;margin-top:26px">
           <div class="node n-green" style="font-size:23px">RESUME SESSION</div>
@@ -920,39 +1029,38 @@ body.editing .slide [contenteditable]{outline:1px dashed rgba(63,185,80,.5);outl
       </div>
     </div>
     <div style="position:absolute;right:150px;top:150px;width:800px">
-      <div class="code sm frag">
-<span class="cl"><span class="k">var</span> <span class="n">session</span> = <span class="k">await</span> client.<span class="f">CreateSessionAsync</span>(</span>
-<span class="cl">    <span class="k">new</span> <span class="t">SessionConfig</span></span>
+      <div class="code sm auto-step" data-code="resume" style="--step:2;margin-top:30px;padding:30px;font-size:24px;line-height:1.5">
+<span class="cl"><span class="k">await using var</span> session =</span>
+<span class="cl">    <span class="k">await</span> client.<span class="f">ResumeSessionAsync</span>(</span>
+<span class="cl">    <span class="s">"release-check"</span>, <span class="k">new</span> <span class="t">ResumeSessionConfig</span></span>
 <span class="cl">    {</span>
-<span class="cl">        SessionId = <span class="s">"release-check-2026-10-15"</span></span>
+<span class="cl">        AvailableTools = [],</span>
+<span class="cl">        OnPermissionRequest =</span>
+<span class="cl">            <span class="t">PermissionHandler</span>.<span class="f">ApproveAll</span></span>
 <span class="cl">    });</span>
       </div>
-      <div class="code sm frag" style="margin-top:30px">
-<span class="cl"><span class="c">// later: another process, another day</span></span>
-<span class="cl"><span class="k">var</span> <span class="n">session</span> = <span class="k">await</span> client.<span class="f">ResumeSessionAsync</span>(</span>
-<span class="cl">    <span class="s">"release-check-2026-10-15"</span>);</span>
-      </div>
-      <p class="body frag" style="margin-top:40px;font-size:27px">Conversation history, tool state and planning context restored. <strong>An agent no longer has to finish everything in one HTTP request.</strong></p>
+      <p class="body auto-step" style="--step:7;margin-top:30px;font-size:26px">History, tool-call results and planning context persist. <strong>Process memory and tool implementations do not.</strong> Re-register tools and permission handlers when needed. This demo has no domain tools.</p>
+      <p class="body auto-step" style="--step:9;margin-top:22px;font-size:24px">Disposing a session frees runtime resources but keeps saved history. Deletion is a separate operation.</p>
     </div>
   </div>
 </section>
 
 <!-- ============================================================
-     SLIDE 26 - PERMISSIONS
+     SLIDE 28 - PERMISSIONS
      ============================================================ -->
 <section class="slide" data-name="permissions">
   <div class="pad">
     <div class="kicker reveal">Control</div>
     <h2 class="reveal d1" style="margin-top:36px;font-size:100px">Agentic<br><span style="color:var(--muted)">≠</span> uncontrolled.</h2>
-    <p class="body reveal d3" style="margin-top:56px;max-width:660px"><span style="font-family:var(--font-mono);font-size:25px;color:var(--amber)">ApproveAll</span> was a workshop convenience, not a production security recommendation.<br><br>Permission handling and lifecycle hooks can inspect, approve, deny or transform tool activity. <strong>The model proposes. Your application decides.</strong></p>
+    <p class="body reveal d3" style="margin-top:56px;max-width:660px;font-size:29px"><span style="font-family:var(--font-mono);font-size:25px;color:var(--amber)">ApproveAll</span> is a workshop shortcut, not a sandbox. It throws under managed settings.<br><br>Permission handlers allow or deny requested operations. Lifecycle hooks can inspect or transform tool activity. <strong>Enforce authorisation in normal code and external systems too.</strong></p>
     <div style="position:absolute;right:220px;top:150px;bottom:150px;display:flex;align-items:center">
       <div class="flow v" style="gap:0">
-        <div class="node n-green frag">AGENT</div>
-        <div class="cv frag"></div>
-        <div class="node n-amber frag">TOOL REQUEST</div>
-        <div class="cv frag"></div>
-        <div class="node frag" style="flex-direction:column;gap:6px">PERMISSION / POLICY<small>hooks · governance</small></div>
-        <div class="frag" style="display:flex;gap:70px;margin-top:44px">
+        <div class="node n-green auto-step" style="--step:2">AGENT</div>
+        <div class="cv auto-step" style="--step:3"></div>
+        <div class="node n-amber auto-step" style="--step:4">TOOL REQUEST</div>
+        <div class="cv auto-step" style="--step:5"></div>
+        <div class="node auto-step" style="--step:6;flex-direction:column;gap:6px">PERMISSION / POLICY<small>hooks · governance</small></div>
+        <div class="auto-step" style="--step:8;display:flex;gap:70px">
           <div class="flow v" style="gap:0"><div class="cv g"></div><div class="node" style="color:var(--green);border-color:var(--green)">ALLOW</div></div>
           <div class="flow v" style="gap:0"><div class="cv" style="background:rgba(248,81,73,.4)"></div><div class="node" style="color:var(--red);border-color:rgba(248,81,73,.55)">DENY</div></div>
         </div>
@@ -962,7 +1070,7 @@ body.editing .slide [contenteditable]{outline:1px dashed rgba(63,185,80,.5);outl
 </section>
 
 <!-- ============================================================
-     SLIDE 27 - MULTI-AGENT
+     SLIDE 29 - MULTI-AGENT
      ============================================================ -->
 <section class="slide" data-name="multi-agent">
   <div class="pad">
@@ -970,55 +1078,232 @@ body.editing .slide [contenteditable]{outline:1px dashed rgba(63,185,80,.5);outl
     <h2 class="reveal d1" style="margin-top:36px;font-size:88px">Agent count is not<br>a maturity metric.</h2>
     <div style="position:absolute;left:150px;bottom:170px">
       <div style="display:grid;grid-template-columns:auto auto auto;gap:0;align-items:center">
-        <div class="node n-green reveal d2">MAIN AGENT</div>
+        <div class="node n-green reveal d2" style="font-size:23px">APP CODE</div>
         <div class="ch g draw reveal d3" style="width:60px"></div>
         <div class="branches reveal d3" style="border-color:var(--green-dim);gap:18px">
-          <div class="branch"><div class="stub"></div><div class="node" style="font-size:23px">RESEARCH AGENT</div></div>
-          <div class="branch"><div class="stub"></div><div class="node" style="font-size:23px">CODE AGENT</div></div>
-          <div class="branch"><div class="stub"></div><div class="node" style="font-size:23px">REVIEW AGENT</div></div>
+          <div class="branch"><div class="stub"></div><div class="node" style="font-size:23px">BUILD / TEST SESSION</div></div>
+          <div class="branch"><div class="stub"></div><div class="node" style="font-size:23px">REVIEW / SECURITY SESSION</div></div>
         </div>
       </div>
+      <div class="flow auto-step" style="--step:8;margin-top:40px;gap:24px"><span class="clabel">reports</span><div class="ch g" style="width:60px"></div><div class="node n-green" style="font-size:23px">COORDINATOR SESSION</div></div>
     </div>
     <div style="position:absolute;right:150px;top:340px;width:640px">
-      <p class="body frag" style="font-size:29px">Multiple agents become interesting when work can <strong>genuinely be separated</strong>:</p>
-      <div class="mt frag" style="margin-top:30px;font-size:26px;line-height:2.1">
-        <span class="m">·</span> different responsibilities<br>
-        <span class="m">·</span> different context<br>
-        <span class="m">·</span> parallel work<br>
-        <span class="m">·</span> specialised instructions &amp; tools
-      </div>
-      <p class="body frag" style="margin-top:34px;font-size:26px">Context isolation: a sub-agent works a focused task and returns a <strong>summary</strong> instead of stuffing everything into the parent context.</p>
+      <p class="body auto-step" style="--step:2;font-size:29px"><strong>This demo is application-orchestrated.</strong> Code assigns two specialist tasks, runs independent sessions with <span style="font-family:var(--font-mono)">Task.WhenAll</span>, then sends their reports to a coordinator.</p>
+      <p class="body auto-step" style="--step:5;margin-top:30px;font-size:27px">Separate contexts and tools. Explicit report handoff. <strong>No automatic delegation by a main agent.</strong></p>
+      <p class="body auto-step" style="--step:7;margin-top:30px;font-size:26px">Runtime-managed custom sub-agents are a separate supported pattern. Do not confuse them with this demo.</p>
     </div>
   </div>
 </section>
 
 <!-- ============================================================
-     SLIDE 28 - START SIMPLE
+     SLIDE 30 - START SIMPLE
      ============================================================ -->
 <section class="slide" data-name="start-simple">
   <div class="pad" style="display:flex;flex-direction:column;justify-content:center;align-items:flex-start">
     <div class="kicker reveal">Architectural warning</div>
-    <div class="flow reveal d2" style="margin-top:80px;gap:40px;align-items:center">
-      <div class="node n-green" style="font-size:34px;padding:34px 56px">ONE AGENT</div>
-      <span style="font:600 50px/1 var(--font-display);color:var(--muted)">+</span>
-      <div class="node n-amber" style="font-size:34px;padding:34px 56px">GOOD TOOLS</div>
+    <div style="position:relative;width:1120px;height:340px;flex-shrink:0;margin-top:70px">
+      <svg class="loop-arrows auto-step" style="--step:4;width:1120px;height:340px" viewBox="0 0 1120 340" role="img" aria-label="Start with one agent and good tools. Split into multiple agents only when needed.">
+        <defs>
+          <marker id="split-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto"><polygon points="0,0 8,4 0,8" fill="var(--muted)"/></marker>
+        </defs>
+        <path d="M200 120 V240" stroke="var(--muted)" marker-end="url(#split-arrow)"/>
+        <text x="230" y="187">only when needed</text>
+      </svg>
+      <div class="node n-green auto-step" style="--step:0;position:absolute;left:0;top:0;width:400px;height:120px;font-size:34px">ONE AGENT</div>
+      <span class="auto-step" style="--step:1;position:absolute;left:440px;top:35px;width:60px;text-align:center;font:600 50px/1 var(--font-display);color:var(--muted)">+</span>
+      <div class="node n-amber auto-step" style="--step:2;position:absolute;left:540px;top:0;width:450px;height:120px;font-size:34px">GOOD TOOLS</div>
+      <div class="node n-grey auto-step" style="--step:6;position:absolute;left:0;top:240px;width:400px;height:100px;font-size:30px">MULTIPLE AGENTS</div>
     </div>
-    <div class="frag" style="margin-top:60px;margin-left:120px">
-      <div class="flow v" style="gap:0;align-items:flex-start">
-        <div class="flow" style="gap:24px;align-items:center">
-          <div class="cv" style="height:70px"></div>
-          <span class="clabel">only when needed</span>
-        </div>
-        <div class="node n-grey" style="font-size:30px;padding:28px 48px;margin-left:0">MULTIPLE AGENTS</div>
-      </div>
-    </div>
-    <p class="body frag" style="margin-top:80px;max-width:1100px;font-size:31px">Split when an agent is overloaded, has conflicting instructions, needs radically different context, or contains genuinely independent work.<br><br><strong>Multi-agent architecture is sometimes just distributed confusion with more API calls.</strong></p>
+    <p class="body auto-step" style="--step:8;margin-top:50px;max-width:1100px;font-size:31px">Split when an agent is overloaded, has conflicting instructions, needs radically different context, or contains genuinely independent work.<br><br><strong>Multi-agent architecture is sometimes just distributed confusion with more API calls.</strong></p>
   </div>
 </section>
 
-<!-- ============================================================
-     SLIDE 29 - FINAL CHALLENGE
-     ============================================================ -->
+<!-- === CUSTOM AGENTS: runtime delegation, not application scheduling === -->
+<section class="slide" data-name="custom-agents">
+  <div class="pad">
+    <div class="kicker reveal">Different contexts. Explicit roles.</div>
+    <h2 class="reveal d1" style="margin-top:55px;font-size:96px;max-width:650px">Define roles.<br>Delegate<br><span class="g">at runtime.</span></h2>
+    <p class="body reveal d3" style="position:absolute;left:150px;bottom:160px;width:610px;font-size:29px">One parent session. File-defined specialists with their own instructions and tool scopes.<br><br>The runtime invokes specialists and returns their reports. <strong>Your C# code does not schedule separate sessions.</strong></p>
+    <div style="position:absolute;left:900px;top:140px;width:880px;height:800px">
+      <svg class="loop-arrows" style="width:880px;height:800px" viewBox="0 0 880 800" role="img" aria-label="The parent delegates to customer and service investigators. Each specialist has a file-defined role and restricted tools, and returns a report to the parent.">
+        <defs>
+          <marker id="specialist-green" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto"><polygon points="0,0 8,4 0,8" fill="var(--green)"/></marker>
+          <marker id="specialist-blue" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto"><polygon points="0,0 8,4 0,8" fill="var(--blue)"/></marker>
+        </defs>
+        <g class="auto-step" style="--step:2">
+          <path d="M320 200 V300 H140 V420" stroke="var(--green)" marker-end="url(#specialist-green)"/>
+          <path d="M600 200 V300 H730 V420" stroke="var(--green)" marker-end="url(#specialist-green)"/>
+          <text x="140" y="280">delegate</text>
+          <text x="730" y="280">delegate</text>
+        </g>
+        <g class="auto-step" style="--step:8">
+          <path d="M240 420 V350 H400 V200" stroke="var(--blue)" marker-end="url(#specialist-blue)"/>
+          <path d="M630 420 V350 H520 V200" stroke="var(--blue)" marker-end="url(#specialist-blue)"/>
+          <text x="255" y="390">report</text>
+          <text x="615" y="390" text-anchor="end">report</text>
+        </g>
+      </svg>
+      <div class="node n-green loop-node auto-step" style="--step:0;left:260px;top:100px;width:360px">PARENT<small>delegate · combine evidence</small></div>
+      <div class="node n-purple loop-node auto-step" style="--step:4;left:0;top:420px;width:390px;height:120px;font-size:23px">CUSTOMER INVESTIGATOR<small>profile · orders</small></div>
+      <div class="node n-blue loop-node auto-step" style="--step:6;left:490px;top:420px;width:390px;height:120px;font-size:23px">SERVICE INVESTIGATOR<small>health · deployment<br>incidents</small></div>
+      <p class="clabel auto-step" style="--step:5;position:absolute;left:0;top:560px;width:390px;font-size:19px">customer-investigator.agent.md</p>
+      <p class="clabel auto-step" style="--step:7;position:absolute;left:490px;top:560px;width:390px;font-size:19px">service-investigator.agent.md</p>
+      <p class="body auto-step" style="--step:10;position:absolute;left:0;top:670px;width:860px;font-size:27px">Files define behaviour. Tools provide facts.<br><strong>Delegation and reports are observable runtime events.</strong></p>
+    </div>
+  </div>
+</section>
+
+<!-- === AGENT FILE SHAPE: scaffold, not the exercise solution === -->
+<section class="slide" data-name="custom-agent-format">
+  <div class="pad">
+    <div class="kicker reveal">Working with agent files</div>
+    <h2 class="reveal d1" style="margin-top:50px;font-size:96px;max-width:650px">Instructions<br>are <span class="g">not tools.</span></h2>
+    <p class="body reveal d3" style="margin-top:60px;max-width:590px;font-size:29px">Frontmatter describes <strong>when to delegate</strong> and which registered tools the specialist may use.<br><br>The Markdown body defines its role, evidence requirements and report format.</p>
+    <div style="position:absolute;right:150px;top:180px;width:950px">
+      <div class="clabel reveal d2" style="margin-bottom:24px">FILE SHAPE · REPLACE THE PLACEHOLDERS</div>
+      <div class="code sm reveal d2" data-code="agent-file-shape" style="font-size:27px;line-height:1.65;padding:40px">
+<span class="cl">---</span>
+<span class="cl"><span class="t">name</span>: &lt;specialist-name&gt;</span>
+<span class="cl"><span class="t">description</span>: &lt;when to delegate here&gt;</span>
+<span class="cl"><span class="t">tools</span>: [<span class="s">"&lt;allowed-tool&gt;"</span>]</span>
+<span class="cl">---</span>
+<span class="cl">&lt;focused role and instructions&gt;</span>
+<span class="cl">&lt;facts, unknowns, suggested next action&gt;</span>
+      </div>
+      <p class="body reveal d4" style="margin-top:42px;font-size:28px">Point <span class="g" style="font-family:var(--font-mono)">AgentDirectories</span> at your local agents/ folder<br>using an absolute path. Keep tool handlers in C#.<br><strong>No custom Markdown parser. No extra filesystem tool.</strong></p>
+    </div>
+  </div>
+</section>
+
+<!-- === LAB 03: exercise first, reference implementation afterward === -->
+<section class="slide" data-name="lab-3">
+  <div class="pad">
+    <div class="lab-num reveal">LAB 03</div>
+    <h2 class="reveal d1" style="margin-top:48px;font-size:104px">Give the work<br>to <span class="g">specialists.</span></h2>
+    <p class="body reveal d2" style="margin-top:54px;width:640px;font-size:29px">“Investigate customer 123's failed order and the related service problem. Explain impact, uncertainty and a suggested next action.”</p>
+    <p class="body reveal d3" style="margin-top:38px;width:640px;font-size:27px">Extend your own application. Create the two files and use one parent session.<br><br><strong>No C# scheduling of specialist sessions.</strong><br>The next slide supplies the fictional data.</p>
+    <div class="lab-time reveal d4" style="position:absolute;left:150px;bottom:140px"><span class="g">20</span> MIN</div>
+    <div style="position:absolute;right:150px;top:150px;width:800px">
+      <div class="lab-goal reveal d2" style="padding:34px 38px">
+        <div class="lbl" style="font-size:20px;letter-spacing:.08em">customer-investigator.agent.md</div>
+        <p class="body" style="font-size:27px">Find customer, order, affected service and payment outcome.</p>
+        <div class="mt" style="font-size:23px;margin-top:14px;color:var(--amber)">get_customer · get_orders</div>
+      </div>
+      <div class="lab-goal reveal d3" style="padding:34px 38px;margin-top:26px">
+        <div class="lbl" style="font-size:20px;letter-spacing:.08em">service-investigator.agent.md</div>
+        <p class="body" style="font-size:27px">Investigate that service's health, deployment and incidents.</p>
+        <div class="mt" style="font-size:23px;margin-top:14px;color:var(--amber)">get_service_status · get_deployment_status<br>get_incidents</div>
+      </div>
+      <p class="body reveal d4" style="margin-top:32px;font-size:26px">Register all five domain tools plus <strong>task</strong>. Exclude domain tools from <strong>DefaultAgent</strong>, not from the session. Give each file only its listed tools.<br><br>Require both specialist reports. Observe delegation, tools and failures.</p>
+    </div>
+  </div>
+</section>
+
+<!-- === LAB 03: enough fictional evidence to work without the repository === -->
+<section class="slide" data-name="lab-3-data">
+  <div class="pad">
+    <div class="lab-num reveal">LAB 03 · FICTIONAL DATA</div>
+    <h2 class="reveal d1" style="margin-top:36px;font-size:88px">Two contexts.<br><span class="g">One investigation.</span></h2>
+    <div class="split2 reveal d2" style="margin-top:65px;grid-template-columns:1fr 1px 1fr;gap:70px;height:auto">
+      <div>
+        <div class="kicker" style="color:var(--purple);letter-spacing:.15em">CUSTOMER EVIDENCE</div>
+        <div class="mt" style="font-size:26px;line-height:1.8;margin-top:28px">customer <span class="arr">→</span> 123 · Alex Example<br>order <span class="arr">→</span> ORD-9001<br>service <span class="arr">→</span> checkout<br>status <span class="arr">→</span> checkout timed out<br>payment <span class="arr">→</span> not captured</div>
+      </div>
+      <div class="vline"></div>
+      <div>
+        <div class="kicker" style="color:var(--blue);letter-spacing:.15em">SERVICE EVIDENCE</div>
+        <div class="mt" style="font-size:26px;line-height:1.8;margin-top:28px">checkout <span class="arr">→</span> degraded<br>deployment <span class="arr">→</span> v2.4.1 · degraded<br>incident <span class="arr">→</span> INC-104 · investigating</div>
+        <p class="body" style="margin-top:24px;font-size:27px">Requests time out after a connection-pool limit change in v2.4.1. This is an investigation finding, not a proven root cause.</p>
+      </div>
+    </div>
+    <p class="body reveal d3" style="position:absolute;left:150px;bottom:140px;width:1550px;font-size:28px">Implement deterministic, structured results for these facts. Reject unknown identifiers explicitly.<br><strong>Success:</strong> both specialists finish, the parent correlates order and service evidence, and no corrective action is claimed.</p>
+  </div>
+</section>
+
+<!-- === LAB 03 DEBRIEF: delegation evidence before reference code === -->
+<section class="slide" data-name="debrief-3">
+  <div class="pad">
+    <div class="kicker reveal">Debrief · Lab 03</div>
+    <h2 class="reveal d1" style="margin-top:45px;font-size:96px">Who actually<br><span class="g">did the work?</span></h2>
+    <p class="body reveal d3" style="margin-top:65px;width:640px;font-size:29px">Did both specialists run with their own tool scope?<br><br>Did the parent pass the affected service identifier and combine reports?<br><br><strong>An answer is not proof of delegation.</strong></p>
+    <div style="position:absolute;right:150px;top:175px;width:780px">
+      <div class="kicker reveal d2" style="color:var(--green);letter-spacing:.15em">OBSERVE, DON'T ASSUME</div>
+      <div class="mt reveal d2" style="font-size:27px;line-height:2.1;margin-top:34px">subagent.started<br><span class="m">tool calls + returned evidence</span><br>subagent.completed<br><span style="color:var(--red)">subagent.failed</span></div>
+      <div class="hr reveal d3" style="margin:34px 0"></div>
+      <p class="body reveal d3" style="font-size:29px">Customer 123 → ORD-9001 → checkout<br>Checkout → v2.4.1 → INC-104</p>
+      <p class="body reveal d4" style="margin-top:32px;font-size:27px">Payment was not captured. Root cause remains under investigation.<br><br>Reject missing, failed or cancelled specialist reports. <strong>Idle is not the acceptance test.</strong></p>
+    </div>
+  </div>
+</section>
+
+<!-- === LAB 03 REFERENCE: file-defined role and capability scopes === -->
+<section class="slide" data-name="lab-3-reference-files">
+  <div class="pad">
+    <div class="kicker reveal">Debrief · Reference agent files · Essential fields</div>
+    <h2 class="reveal d1" style="margin-top:36px;font-size:84px">Same format. <span class="g">Different responsibilities.</span></h2>
+    <div class="reveal d2" style="display:grid;grid-template-columns:1fr 1fr;gap:46px;margin-top:55px">
+      <div>
+        <div class="clabel" style="font-size:21px;margin-bottom:22px">customer-investigator.agent.md</div>
+        <div class="code sm" data-code="customer-agent-reference" style="padding:30px;font-size:24px;line-height:1.65">
+<span class="cl">---</span>
+<span class="cl"><span class="t">name</span>: customer-investigator</span>
+<span class="cl"><span class="t">description</span>: &gt;</span>
+<span class="cl">  Investigates customer profiles</span>
+<span class="cl">  and failed orders.</span>
+<span class="cl"><span class="t">tools</span>: [<span class="s">"get_customer"</span>, <span class="s">"get_orders"</span>]</span>
+<span class="cl">---</span>
+<span class="cl">Report order, affected service</span>
+<span class="cl">and payment outcome with evidence.</span>
+<span class="cl">Return service IDs to the parent.</span>
+        </div>
+      </div>
+      <div>
+        <div class="clabel" style="font-size:21px;margin-bottom:22px">service-investigator.agent.md</div>
+        <div class="code sm" data-code="service-agent-reference" style="padding:30px;font-size:24px;line-height:1.65">
+<span class="cl">---</span>
+<span class="cl"><span class="t">name</span>: service-investigator</span>
+<span class="cl"><span class="t">description</span>: &gt;</span>
+<span class="cl">  Investigates service health,</span>
+<span class="cl">  deployments and incidents.</span>
+<span class="cl"><span class="t">tools</span>: [<span class="s">"get_service_status"</span>,</span>
+<span class="cl">  <span class="s">"get_deployment_status"</span>, <span class="s">"get_incidents"</span>]</span>
+<span class="cl">---</span>
+<span class="cl">Investigate the supplied service.</span>
+<span class="cl">Report facts and uncertainty.</span>
+        </div>
+      </div>
+    </div>
+    <p class="body reveal d3" style="margin-top:38px;font-size:27px">Read-only roles. No inherited catch-all tool list. Both report evidence, unknowns and a suggested next action.<br>The full reference files also prohibit invented facts and corrective actions.</p>
+  </div>
+</section>
+
+<!-- === LAB 03 REFERENCE: native discovery and parent-only tool exclusions === -->
+<section class="slide" data-name="lab-3-reference-config">
+  <div class="pad">
+    <div class="kicker reveal">Debrief · Reference configuration</div>
+    <h2 class="reveal d1" style="margin-top:50px;font-size:92px;max-width:520px">Discover.<br>Scope.<br><span class="g">Delegate.</span></h2>
+    <p class="body reveal d3" style="margin-top:55px;max-width:510px;font-size:27px"><strong>tools</strong> contains the five domain functions.<br><br>Copy the agent files into the output's <strong>agents/</strong> directory on build and publish.<br><br>The parent can dispatch. The specialist files select their domain tools.</p>
+    <div class="code sm reveal d2" data-code="lab-3-config" style="position:absolute;right:150px;top:170px;width:1040px;padding:32px 38px;font-size:25px;line-height:1.5">
+<span class="cl"><span class="k">var</span> config = <span class="t">WorkshopSession</span>.<span class="f">Configure</span>(tools);</span>
+<span class="cl">config.AgentDirectories =</span>
+<span class="cl">    [<span class="t">Path</span>.<span class="f">Combine</span>(<span class="t">AppContext</span>.BaseDirectory, <span class="s">"agents"</span>)];</span>
+<span class="cl">config.AvailableTools!.<span class="f">Add</span>(<span class="s">"task"</span>);</span>
+<span class="cl">config.DefaultAgent = <span class="k">new</span> <span class="t">DefaultAgentConfig</span></span>
+<span class="cl">{</span>
+<span class="cl">    ExcludedTools = tools.<span class="f">Select</span>(t =&gt; t.Name).<span class="f">ToList</span>()</span>
+<span class="cl">};</span>
+<span class="cl">config.EnableConfigDiscovery = <span class="k">false</span>;</span>
+<span class="cl">config.EnableSkills = <span class="k">false</span>;</span>
+<span class="cl">config.SystemMessage!.Content +=</span>
+<span class="cl">    <span class="s">"\nDelegate to both investigators; combine reports."</span>;</span>
+<span class="cl"><span class="k">await using var</span> session =</span>
+<span class="cl">    <span class="k">await</span> client.<span class="f">CreateSessionAsync</span>(config);</span>
+    </div>
+    <p class="body reveal d4" style="position:absolute;right:150px;bottom:160px;width:1040px;font-size:26px">The reference solution validates native discovery, subscribes before sending, and requires both successful reports. <strong>No separate specialist sessions.</strong></p>
+  </div>
+</section>
+
+<!-- === FINAL CHALLENGE: advisory release investigation === -->
 <section class="slide" data-name="final-challenge">
   <div class="pad">
     <div class="lab-num reveal">FINAL CHALLENGE</div>
@@ -1034,92 +1319,76 @@ body.editing .slide [contenteditable]{outline:1px dashed rgba(63,185,80,.5);outl
           get_security_findings()
         </div>
       </div>
-      <p class="body reveal d3" style="margin-top:44px;font-size:28px">I'm not telling you which ones need to be called.<br><br><strong>Don't encode the decision tree.</strong> Give the agent the evidence it needs and see how it investigates.</p>
+      <p class="body reveal d3" style="margin-top:36px;font-size:28px">Ask for a <strong>release recommendation</strong> for checkout, with blockers and missing evidence. The agent chooses how to investigate.</p>
+      <p class="body reveal d4" style="margin-top:28px;font-size:27px"><strong>Advisory, not authorisation.</strong> Mandatory checks and deployment approval stay in deterministic policy. No deployment tool is exposed.</p>
+      <p class="body reveal d4" style="margin-top:28px;font-size:26px">Extend your own agent. Implement these four read-only tools with fictional build, test, PR and security data. <strong>Do not hardcode the investigation order.</strong></p>
     </div>
   </div>
 </section>
 
 <!-- ============================================================
-     SLIDE 30 - WHAT JUST HAPPENED
+     SLIDE 39 - WHAT JUST HAPPENED
      ============================================================ -->
 <section class="slide" data-name="what-happened">
   <div class="pad">
     <div class="kicker reveal">Debrief</div>
     <h2 class="reveal d1" style="margin-top:36px;font-size:96px">What just<br>happened?</h2>
-    <p class="body frag" style="position:absolute;left:150px;bottom:170px;max-width:640px">We started with five lines of code that sent a prompt. <strong>The core model barely changed.</strong> What changed is what surrounded it: state, capabilities, the permission to decide, connections beyond the application.</p>
+    <p class="body auto-step" style="--step:11;position:absolute;left:150px;bottom:170px;max-width:640px">We started with a scoped session that sent a prompt. <strong>The runtime was there from the beginning.</strong> What grew was our application's context, domain capabilities and connections, inside explicit policy boundaries.</p>
     <div style="position:absolute;right:220px;top:120px;bottom:140px;display:flex;align-items:center">
       <div class="flow v" style="gap:0">
-        <div class="node n-purple frag">PROMPT</div>
-        <div class="cv frag"></div>
-        <div class="node frag">SESSION</div>
-        <div class="cv frag"></div>
-        <div class="node n-green frag">AGENT LOOP</div>
-        <div class="cv frag"></div>
-        <div class="node n-amber frag">TOOLS</div>
-        <div class="cv frag"></div>
-        <div class="node n-blue frag">EXTERNAL CAPABILITIES</div>
+        <div class="node n-purple auto-step" style="--step:2">PROMPT</div>
+        <div class="cv auto-step" style="--step:3"></div>
+        <div class="node auto-step" style="--step:4">SESSION</div>
+        <div class="cv auto-step" style="--step:5"></div>
+        <div class="node n-green auto-step" style="--step:6">AGENT LOOP</div>
+        <div class="cv auto-step" style="--step:7"></div>
+        <div class="node n-amber auto-step" style="--step:8">TOOLS</div>
+        <div class="cv auto-step" style="--step:9"></div>
+        <div class="node n-blue auto-step" style="--step:10">EXTERNAL CAPABILITIES</div>
       </div>
     </div>
   </div>
 </section>
 
 <!-- ============================================================
-     SLIDE 31 - FROM THIS → TO THIS (architecture payoff)
-     ============================================================ -->
-<section class="slide" data-name="payoff">
-  <div class="pad">
-    <div class="kicker reveal">From this…</div>
-    <div class="flow reveal d2" style="margin-top:50px;gap:0">
-      <div class="node">APP</div><div class="ch g draw"></div><div class="node n-green">COPILOT</div>
-    </div>
-    <div class="frag" style="margin-top:70px">
-      <div class="kicker" style="margin-bottom:34px">…to <span class="g">this.</span></div>
-      <div style="display:grid;grid-template-columns:auto auto auto auto auto;gap:0;align-items:center">
-        <div class="node" style="font-size:30px;padding:28px 46px">APP</div>
-        <div class="ch g draw" style="width:80px"></div>
-        <div class="node n-green" style="font-size:30px;padding:28px 46px">COPILOT AGENT</div>
-        <div class="ch g draw" style="width:60px"></div>
-        <div class="branches" style="border-color:var(--green-dim);gap:10px">
-          <div class="branch frag"><div class="stub"></div><div class="node" style="font-size:20px;padding:8px 22px">GITHUB</div></div>
-          <div class="branch frag"><div class="stub"></div><div class="node" style="font-size:20px;padding:8px 22px">CI/CD</div></div>
-          <div class="branch frag"><div class="stub"></div><div class="node" style="font-size:20px;padding:8px 22px">DATABASE</div></div>
-          <div class="branch frag"><div class="stub"></div><div class="node n-amber" style="font-size:20px;padding:8px 22px">CUSTOM TOOLS</div></div>
-          <div class="branch frag"><div class="stub"></div><div class="node n-blue" style="font-size:20px;padding:8px 22px">MCP</div></div>
-          <div class="branch frag"><div class="stub"></div><div class="node" style="font-size:20px;padding:8px 22px">INTERNAL APIS</div></div>
-          <div class="branch frag"><div class="stub"></div><div class="node" style="font-size:20px;padding:8px 22px">OTHER AGENTS</div></div>
-        </div>
-      </div>
-    </div>
-    <p class="body frag" style="position:absolute;left:150px;bottom:150px;max-width:900px">At the beginning this would have looked like ten unrelated concepts. <strong>Now every branch has somewhere to live in your head.</strong></p>
-  </div>
-</section>
-
-<!-- ============================================================
-     SLIDE 32 - CLOSING STATEMENT
-     ============================================================ -->
-<section class="slide" data-name="closing">
-  <div class="edge"></div>
-  <div class="pad" style="display:flex;flex-direction:column;justify-content:center;padding-left:180px">
-    <div class="kicker reveal">The important part</div>
-    <p class="statement reveal d2" style="margin-top:70px">You didn't integrate<br>an LLM.</p>
-    <p class="statement frag" style="margin-top:70px">You gave your application<br>an <span class="g">agent runtime.</span></p>
-    <p class="body frag" style="margin-top:80px;max-width:1000px;font-size:29px">Start small. Give the agent clear capabilities. Keep deterministic work deterministic. Observe what it does. <strong>Add autonomy only when it buys you something.</strong></p>
-  </div>
-</section>
-
-<!-- ============================================================
-     SLIDE 33 - FIVE THINGS TO REMEMBER
+     SLIDE 40 - FIVE THINGS TO REMEMBER
      ============================================================ -->
 <section class="slide" data-name="summary">
   <div class="pad">
     <div class="kicker reveal">Five things to remember</div>
     <div class="biglist" style="margin-top:80px;gap:52px">
-      <div class="row frag"><div class="num">01</div><div class="txt" style="font-size:62px">A session is more than a model call.</div></div>
-      <div class="row frag"><div class="num">02</div><div class="txt" style="font-size:62px">Tools give the agent <span class="g">capabilities.</span></div></div>
-      <div class="row frag"><div class="num">03</div><div class="txt" style="font-size:62px">The agent loop chooses how to use them.</div></div>
-      <div class="row frag"><div class="num">04</div><div class="txt" style="font-size:62px">MCP moves capabilities across a boundary.</div></div>
-      <div class="row frag"><div class="num">05</div><div class="txt" style="font-size:62px">Start with <span class="g">one agent.</span> Add complexity when the problem demands it.</div></div>
+      <div class="row auto-step" style="--step:2"><div class="num">01</div><div class="txt" style="font-size:62px">A session is more than a model call.</div></div>
+      <div class="row auto-step" style="--step:4"><div class="num">02</div><div class="txt" style="font-size:62px">Tools give the agent <span class="g">capabilities.</span></div></div>
+      <div class="row auto-step" style="--step:6"><div class="num">03</div><div class="txt" style="font-size:62px">The agent loop chooses how to use them.</div></div>
+      <div class="row auto-step" style="--step:8"><div class="num">04</div><div class="txt" style="font-size:62px">MCP moves capabilities across a boundary.</div></div>
+      <div class="row auto-step" style="--step:10"><div class="num">05</div><div class="txt" style="font-size:62px">Start with <span class="g">one agent.</span> Add file-defined specialists when roles need separation.</div></div>
     </div>
+  </div>
+</section>
+
+<!-- === RELEASE-PINNED SOURCES: participant reference === -->
+<section class="slide" data-name="sources">
+  <div class="pad">
+    <div class="kicker reveal">Keep the contract close</div>
+    <h2 class="reveal d1" style="margin-top:36px;font-size:92px">Official sources.<br><span class="g">Pinned to 1.0.22.</span></h2>
+    <div class="reveal d2" style="display:grid;grid-template-columns:1fr 1fr;gap:80px;margin-top:65px;font:400 29px/2 var(--font-body)">
+      <div>
+        <a class="reference-link" href="https://github.com/github/copilot-sdk/blob/v1.0.22/dotnet/README.md" target="_blank" rel="noopener">.NET quickstart and API examples</a><br>
+        <a class="reference-link" href="https://github.com/github/copilot-sdk/blob/v1.0.22/docs/setup/bundled-cli.md" target="_blank" rel="noopener">Bundled runtime and distribution</a><br>
+        <a class="reference-link" href="https://github.com/github/copilot-sdk/blob/v1.0.22/docs/auth/authenticate.md" target="_blank" rel="noopener">Authentication</a><br>
+        <a class="reference-link" href="https://github.com/github/copilot-sdk/blob/v1.0.22/docs/features/streaming-events.md" target="_blank" rel="noopener">Streaming and exact event identifiers</a><br>
+        <a class="reference-link" href="https://github.com/github/copilot-sdk/blob/v1.0.22/docs/features/session-persistence.md" target="_blank" rel="noopener">Session persistence and resume</a>
+      </div>
+      <div>
+        <a class="reference-link" href="https://github.com/github/copilot-sdk/blob/v1.0.22/docs/features/mcp.md" target="_blank" rel="noopener">MCP configuration and tool selection</a><br>
+        <a class="reference-link" href="https://github.com/github/copilot-sdk/blob/v1.0.22/docs/features/hooks.md" target="_blank" rel="noopener">Hooks and lifecycle control</a><br>
+        <a class="reference-link" href="https://github.com/github/copilot-sdk/blob/v1.0.22/docs/features/custom-agents.md" target="_blank" rel="noopener">Runtime-managed custom agents</a><br>
+        <a class="reference-link" href="https://github.com/github/copilot-sdk/blob/v1.0.22/docs/features/customization-locations.md" target="_blank" rel="noopener">Native agent-file discovery</a><br>
+        <a class="reference-link" href="https://github.com/github/copilot-sdk/blob/v1.0.22/dotnet/src/Types.cs" target="_blank" rel="noopener">Source: configuration and permissions</a><br>
+        <a class="reference-link" href="https://github.com/github/copilot-sdk/blob/v1.0.22/dotnet/src/Session.cs" target="_blank" rel="noopener">Source: wait, errors and disposal</a>
+      </div>
+    </div>
+    <p class="body reveal d3" style="margin-top:54px;max-width:1450px;font-size:27px">Build the labs from the slide instructions. Presenter demos use prepared reference code.<br>Examples compile against the pinned package. Model output and tool-call order are not deterministic.</p>
   </div>
 </section>
 
@@ -1128,7 +1397,7 @@ body.editing .slide [contenteditable]{outline:1px dashed rgba(63,185,80,.5);outl
 
 <!-- === PRESENTATION CHROME (outside the slide stage) === -->
 <div class="bottom-line"></div>
-<div class="chrome-no" id="pageNo">01 / 33</div>
+<div class="chrome-no" id="pageNo">01 / 41</div>
 <svg class="chrome-mark" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
 
 <!-- === INLINE EDITING UI === -->
@@ -1151,6 +1420,7 @@ class SlidePresentation {
     this.pageNo = document.getElementById('pageNo');
     this.setupStageScale();
     this.setupKeyboardNav();
+    this.setupClickNav();
     this.setupTouchNav();
     this.setupWheelNav();
     this.showSlide(0);
@@ -1213,7 +1483,11 @@ class SlidePresentation {
       }
     });
     if (revealAll) {
-      this.frags(this.current).forEach(f => f.classList.add('on'));
+      const fs = this.frags(this.current);
+      fs.forEach(f => f.classList.add('on'));
+      const highlights = fs.filter(f => f.hasAttribute('data-hl'));
+      highlights.forEach(f => f.classList.remove('cur'));
+      if (highlights.length) highlights[highlights.length - 1].classList.add('cur');
     }
     this.pageNo.textContent =
       String(this.current + 1).padStart(2, '0') + ' / ' + String(this.slides.length).padStart(2, '0');
@@ -1229,6 +1503,14 @@ class SlidePresentation {
         case 'Home': this.showSlide(0); break;
         case 'End': this.showSlide(this.slides.length - 1, true); break;
       }
+    });
+  }
+
+  setupClickNav() {
+    this.stage.addEventListener('pointerup', e => {
+      if (e.pointerType !== 'mouse' || e.button !== 0) return;
+      if (document.body.classList.contains('editing')) return;
+      if (this.slides[this.current].querySelector('.code-focus')) this.next();
     });
   }
 
@@ -1265,12 +1547,22 @@ const deck = new SlidePresentation();
    =========================================== */
 (function () {
   const el = document.getElementById('typed');
+  const architecture = document.getElementById('titleArchitecture');
   const txt = 'build an agent';
   let started = false;
   const start = () => {
     if (started) return; started = true;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      el.textContent = txt;
+      architecture.classList.add('ready');
+      return;
+    }
     let i = 0;
-    (function t() { if (i < txt.length) { el.textContent += txt[i++]; setTimeout(t, 65); } })();
+    (function type() {
+      el.textContent += txt[i++];
+      if (i < txt.length) setTimeout(type, 65);
+      else architecture.classList.add('ready');
+    })();
   };
   /* begin once the title slide is visible */
   const titleSlide = document.querySelector('.slide[data-name="title"]');

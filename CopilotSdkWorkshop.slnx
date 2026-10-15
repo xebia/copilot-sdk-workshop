@@ -1,0 +1,43 @@
+<Solution>
+  <Folder Name="/demos/">
+    <Project Path="demos/Workshop.Demos.csproj" />
+  </Folder>
+  <Folder Name="/demos/mcp-server/">
+    <Project Path="demos/mcp-server/Workshop.McpServer.csproj" />
+  </Folder>
+  <Folder Name="/labs/" />
+  <Folder Name="/labs/01-hello-copilot/" />
+  <Folder Name="/labs/01-hello-copilot/solution/">
+    <Project Path="labs/01-hello-copilot/solution/Lab01.Solution.csproj" />
+  </Folder>
+  <Folder Name="/labs/01-hello-copilot/start/">
+    <Project Path="labs/01-hello-copilot/start/Lab01.Start.csproj" />
+  </Folder>
+  <Folder Name="/labs/02-tools/" />
+  <Folder Name="/labs/02-tools/solution/">
+    <Project Path="labs/02-tools/solution/Lab02.Solution.csproj" />
+  </Folder>
+  <Folder Name="/labs/02-tools/start/">
+    <Project Path="labs/02-tools/start/Lab02.Start.csproj" />
+  </Folder>
+  <Folder Name="/labs/03-agent/" />
+  <Folder Name="/labs/03-agent/solution/">
+    <Project Path="labs/03-agent/solution/Lab03.Solution.csproj" />
+  </Folder>
+  <Folder Name="/labs/03-agent/start/">
+    <Project Path="labs/03-agent/start/Lab03.Start.csproj" />
+  </Folder>
+  <Folder Name="/labs/04-release-challenge/" />
+  <Folder Name="/labs/04-release-challenge/solution/">
+    <Project Path="labs/04-release-challenge/solution/Release.Solution.csproj" />
+  </Folder>
+  <Folder Name="/labs/04-release-challenge/start/">
+    <Project Path="labs/04-release-challenge/start/Release.Start.csproj" />
+  </Folder>
+  <Folder Name="/shared/">
+    <Project Path="shared/Workshop.Tools/Workshop.Tools.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Workshop.Tests/Workshop.Tests.csproj" />
+  </Folder>
+</Solution>
