@@ -1,0 +1,1334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GitHub Copilot SDK: Build with Copilot, not around Copilot</title>
+
+<!-- === FONTS: Big Shoulders Display (condensed headings), IBM Plex Mono (labels/code), Archivo (body) === -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Archivo:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+/* ===========================================
+   THEME - change these variables to retheme
+   =========================================== */
+:root{
+  --bg:#0a0e0b;              /* near-black green-black */
+  --panel:#0e1410;           /* dark panel fill */
+  --panel2:#101712;
+  --text:#f2f6f2;            /* soft white */
+  --muted:#7d8a80;           /* secondary grey */
+  --green:#3fb950;           /* GitHub-style green (runtime / active / success) */
+  --green-dim:rgba(63,185,80,.35);
+  --purple:#a371f7;          /* user prompt / instruction */
+  --blue:#58a6ff;            /* LLM / response */
+  --amber:#d29922;           /* custom capability / tool */
+  --red:#f85149;             /* failing / deny */
+  --border:rgba(125,138,128,.28);
+  --font-display:'Big Shoulders Display',sans-serif;
+  --font-mono:'IBM Plex Mono',monospace;
+  --font-body:'Archivo',sans-serif;
+  --ease:cubic-bezier(.16,1,.3,1);
+  --stage-bg:var(--bg);
+  --slide-bg:var(--bg);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+
+/* ===========================================
+   FIXED 16:9 STAGE: MANDATORY BASE STYLES
+   (viewport-base.css - do not modify)
+   =========================================== */
+html,
+body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    background: var(--stage-bg, #000);
+}
+.deck-viewport {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    background: var(--stage-bg, #000);
+}
+.deck-stage {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    transform-origin: 0 0;
+    background: var(--slide-bg, #fff);
+}
+.slide {
+    position: absolute;
+    inset: 0;
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    display: block;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    background: var(--slide-bg, #fff);
+}
+.slide.active,
+.slide.visible {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+    z-index: 1;
+}
+img, video, canvas, svg {
+    max-width: 100%;
+    max-height: 100%;
+}
+.deck-controls {
+    position: fixed;
+    left: 50%;
+    bottom: 22px;
+    transform: translateX(-50%);
+    z-index: 1000;
+}
+@media print {
+    html, body { width: 1920px; height: auto; overflow: visible; background: #fff; }
+    .deck-viewport { position: static; overflow: visible; background: #fff; }
+    .deck-stage { position: static; width: auto; height: auto; transform: none !important; background: none; }
+    .slide {
+        position: relative; display: block !important; visibility: visible !important;
+        opacity: 1 !important; pointer-events: auto !important;
+        width: 1920px; height: 1080px; break-after: page; page-break-after: always;
+    }
+    .slide:last-child { break-after: auto; page-break-after: auto; }
+    .deck-controls { display: none !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.2s !important;
+    }
+}
+
+/* ===========================================
+   SLIDE ATMOSPHERE - subtle engineering grid
+   =========================================== */
+.slide::before{content:'';position:absolute;inset:0;pointer-events:none;
+  background-image:linear-gradient(rgba(63,185,80,.028) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(63,185,80,.028) 1px,transparent 1px);
+  background-size:120px 120px;}
+
+/* ===========================================
+   TYPOGRAPHY SYSTEM
+   =========================================== */
+.kicker{font:500 25px/1 var(--font-mono);letter-spacing:.35em;color:var(--muted);text-transform:uppercase}
+.kicker .g{color:var(--green)}
+h1{font:700 180px/0.95 var(--font-display);color:var(--text);text-transform:uppercase;letter-spacing:.01em}
+h2{font:700 120px/0.98 var(--font-display);color:var(--text);text-transform:uppercase;letter-spacing:.01em}
+h2.smaller{font-size:96px}
+.g{color:var(--green)}
+.body{font:400 31px/1.55 var(--font-body);color:var(--muted)}
+.body strong{color:var(--text);font-weight:600}
+.statement{font:700 150px/1.02 var(--font-display);color:var(--text);text-transform:uppercase}
+
+/* standard slide padding + layouts */
+.pad{position:absolute;inset:0;padding:120px 150px 150px 150px}
+.split2{display:grid;grid-template-columns:1fr 1fr;gap:0;height:100%}
+.vline{width:1px;background:var(--border);align-self:stretch}
+
+/* left green edge (title/closing) */
+.edge{position:absolute;left:96px;top:120px;bottom:140px;width:2px;background:linear-gradient(180deg,var(--green),rgba(63,185,80,.05))}
+
+/* ===========================================
+   REVEALS & FRAGMENTS
+   .reveal   - animates when slide becomes visible
+   .frag     - hidden until stepped with →/space
+   =========================================== */
+.reveal{opacity:0;transform:translateY(26px);transition:opacity .7s var(--ease),transform .7s var(--ease)}
+.slide.visible .reveal{opacity:1;transform:none}
+.slide.visible .reveal.d1{transition-delay:.12s}
+.slide.visible .reveal.d2{transition-delay:.26s}
+.slide.visible .reveal.d3{transition-delay:.42s}
+.slide.visible .reveal.d4{transition-delay:.58s}
+.slide.visible .reveal.d5{transition-delay:.74s}
+
+.frag{opacity:0;transform:translateY(14px);transition:opacity .5s var(--ease),transform .5s var(--ease)}
+.frag.on{opacity:1;transform:none}
+/* fragments that dim once a later fragment appears */
+.frag.on.dimmed{opacity:.3}
+
+/* ===========================================
+   DIAGRAM VOCABULARY - engineering nodes & connectors
+   =========================================== */
+.node{display:inline-flex;align-items:center;justify-content:center;gap:14px;
+  font:500 27px/1.25 var(--font-mono);letter-spacing:.08em;color:var(--text);
+  background:var(--panel);border:1.5px solid var(--border);border-radius:10px;
+  padding:22px 38px;text-transform:uppercase;text-align:center}
+.node small{display:block;font-size:19px;color:var(--muted);letter-spacing:.06em;text-transform:none}
+.n-green{border-color:var(--green);box-shadow:0 0 26px rgba(63,185,80,.14)}
+.n-purple{border-color:var(--purple);box-shadow:0 0 26px rgba(163,113,247,.12)}
+.n-blue{border-color:var(--blue);box-shadow:0 0 26px rgba(88,166,255,.12)}
+.n-amber{border-color:var(--amber);box-shadow:0 0 26px rgba(210,153,34,.12)}
+.n-grey{border-color:var(--border);color:var(--muted)}
+.n-ghost{background:transparent;border-style:dashed}
+
+/* vertical / horizontal connectors with arrowheads */
+.flow{display:flex;align-items:center}
+.flow.v{flex-direction:column}
+.cv{width:2px;height:44px;background:var(--border);position:relative}
+.cv::after{content:'';position:absolute;bottom:-1px;left:50%;transform:translateX(-50%);
+  border-left:7px solid transparent;border-right:7px solid transparent;border-top:9px solid var(--border)}
+.ch{height:2px;width:70px;background:var(--border);position:relative}
+.ch::after{content:'';position:absolute;right:-1px;top:50%;transform:translateY(-50%);
+  border-top:7px solid transparent;border-bottom:7px solid transparent;border-left:9px solid var(--border)}
+.cv.g,.ch.g{background:var(--green-dim)}
+.cv.g::after{border-top-color:var(--green)}
+.ch.g::after{border-left-color:var(--green)}
+/* connector draw-in */
+.slide.visible .cv.draw{animation:drawV .5s var(--ease) backwards}
+.slide.visible .ch.draw{animation:drawH .5s var(--ease) backwards}
+@keyframes drawV{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+@keyframes drawH{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.cv.draw{transform-origin:top}.ch.draw{transform-origin:left}
+
+/* small label beside a connector */
+.clabel{font:400 21px/1.3 var(--font-mono);color:var(--muted);letter-spacing:.06em}
+
+/* branch list (right side of hub nodes) */
+.branches{display:flex;flex-direction:column;gap:22px;border-left:2px solid var(--border);padding-left:0}
+.branch{display:flex;align-items:center;gap:0}
+.branch .stub{width:56px;height:2px;background:var(--border)}
+.branch .node{padding:16px 30px;font-size:24px}
+
+/* ===========================================
+   CODE PANELS
+   =========================================== */
+.code{background:var(--panel);border:1px solid var(--border);border-radius:14px;
+  font:400 30px/1.75 var(--font-mono);color:var(--text);padding:48px 56px;text-align:left;
+  box-shadow:0 20px 60px rgba(0,0,0,.45)}
+.code.sm{font-size:26px;line-height:1.7}
+.cl{display:block;white-space:pre;border-radius:8px;padding:0 18px;margin:0 -18px;transition:background .4s,opacity .4s}
+.cl.cur{background:rgba(63,185,80,.1);box-shadow:inset 3px 0 0 var(--green)}
+.slide .cl.faded{opacity:.38}
+/* syntax colors */
+.k{color:var(--purple)}      /* keyword */
+.t{color:var(--blue)}        /* type */
+.s{color:#9ece7f}            /* string */
+.f{color:var(--amber)}       /* function/member */
+.c{color:var(--muted)}       /* comment */
+.n{color:var(--text)}
+
+/* terminal line */
+.term{font:400 34px/1 var(--font-mono);color:var(--text)}
+.term .prompt{color:var(--green)}
+.cursor{display:inline-block;width:17px;height:36px;background:var(--green);vertical-align:-6px;margin-left:6px;animation:blink 1.1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+
+/* ===========================================
+   LAB SLIDES
+   =========================================== */
+.lab-num{font:600 27px/1 var(--font-mono);letter-spacing:.4em;color:var(--green);text-transform:uppercase}
+.lab-goal{border:1px solid var(--border);border-radius:14px;background:var(--panel);padding:48px 56px}
+.lab-goal .lbl{font:600 22px/1 var(--font-mono);letter-spacing:.3em;color:var(--green);margin-bottom:28px}
+.lab-time{font:600 38px/1 var(--font-mono);letter-spacing:.2em;color:var(--muted)}
+.lab-time .g{color:var(--green)}
+
+/* key-value mono tables */
+.mt{font:400 28px/2.1 var(--font-mono);color:var(--text)}
+.mt .m{color:var(--muted)}
+.mt .arr{color:var(--green);padding:0 16px}
+
+/* numbered big list */
+.biglist{display:flex;flex-direction:column;gap:40px}
+.biglist .row{display:flex;align-items:baseline;gap:40px}
+.biglist .num{font:600 34px/1 var(--font-mono);color:var(--green)}
+.biglist .txt{font:600 58px/1.1 var(--font-display);color:var(--text);text-transform:uppercase;letter-spacing:.02em}
+.biglist .sub{font:400 27px/1.45 var(--font-body);color:var(--muted);margin-top:10px;text-transform:none;letter-spacing:0}
+
+/* thin separators */
+.hr{height:1px;background:var(--border)}
+.hr.g{background:linear-gradient(90deg,var(--green),transparent)}
+
+/* ===========================================
+   PRESENTATION CHROME (outside slide design)
+   =========================================== */
+.bottom-line{position:fixed;left:0;right:0;bottom:0;height:3px;z-index:900;
+  background:linear-gradient(90deg,var(--green),rgba(63,185,80,.12))}
+.chrome-no{position:fixed;left:34px;bottom:18px;font:400 17px/1 var(--font-mono);color:var(--muted);z-index:901;opacity:.85}
+.chrome-mark{position:fixed;right:30px;bottom:14px;width:26px;height:26px;z-index:901;opacity:.75}
+.chrome-mark path{fill:var(--muted)}
+
+/* ===========================================
+   INLINE EDITING (hover top-left corner or press E)
+   =========================================== */
+.edit-hotzone{position:fixed;top:0;left:0;width:80px;height:80px;z-index:10000;cursor:pointer}
+.edit-toggle{position:fixed;top:16px;left:16px;z-index:10001;opacity:0;pointer-events:none;
+  background:var(--panel);border:1px solid var(--border);border-radius:8px;color:var(--text);
+  font-size:18px;padding:8px 12px;cursor:pointer;transition:opacity .3s}
+.edit-toggle.show,.edit-toggle.active{opacity:1;pointer-events:auto}
+.edit-toggle.active{border-color:var(--green);color:var(--green)}
+body.editing .slide [contenteditable]{outline:1px dashed rgba(63,185,80,.5);outline-offset:4px}
+</style>
+</head>
+<body>
+
+<div class="deck-viewport">
+<main class="deck-stage" id="deckStage">
+
+<!-- ============================================================
+     SLIDE 01 - OPENING
+     ============================================================ -->
+<section class="slide" data-name="title">
+  <div class="edge"></div>
+  <svg style="position:absolute;left:72px;bottom:140px;width:50px;height:50px" viewBox="0 0 16 16" aria-hidden="true"><path fill="#f2f6f2" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+  <div style="position:absolute;left:180px;top:200px;right:160px">
+    <h1 class="reveal">GitHub Copilot<br><span class="g">SDK</span></h1>
+    <p class="reveal d2" style="margin-top:56px;font:500 46px/1.3 var(--font-body);color:var(--muted)">Build <span class="g">with Copilot</span>,<br>not around Copilot.</p>
+    <div class="term reveal d4" style="margin-top:90px"><span class="prompt">&gt;</span> <span id="typed"></span><span class="cursor"></span></div>
+    <!-- stepped: terminal resolves into first architecture -->
+    <div class="frag" style="margin-top:60px">
+      <div class="flow" style="gap:0">
+        <div class="node">APP</div><div class="ch g draw"></div><div class="node n-green">COPILOT</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 02 - TODAY / ROADMAP
+     ============================================================ -->
+<section class="slide" data-name="today">
+  <div class="pad">
+    <div class="kicker reveal">Today</div>
+    <h2 class="reveal d1" style="margin-top:36px;font-size:100px">One concept<br>at a time.</h2>
+    <div style="position:absolute;right:170px;top:130px;bottom:160px;display:flex;align-items:center">
+      <div class="flow v" style="gap:0">
+        <div class="node n-purple frag">PROMPT</div>
+        <div class="cv frag"></div>
+        <div class="node frag">SESSION</div>
+        <div class="cv frag"></div>
+        <div class="node n-amber frag">TOOL</div>
+        <div class="cv frag"></div>
+        <div class="node n-green frag">AGENT</div>
+        <div class="cv frag"></div>
+        <div class="node n-blue frag">MCP</div>
+        <div class="cv frag"></div>
+        <div class="node frag">MULTIPLE AGENTS</div>
+      </div>
+    </div>
+    <p class="body reveal d3" style="position:absolute;left:150px;bottom:160px;max-width:760px">Not every feature in the SDK, but the <strong>mental model</strong>. If you understand sessions, the agent loop, tools and MCP, the rest has somewhere to live.</p>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 03 - UNDER THE HOOD (stack)
+     ============================================================ -->
+<section class="slide" data-name="under-the-hood">
+  <div class="pad">
+    <div class="kicker reveal">Under the hood</div>
+    <h2 class="reveal d1" style="margin-top:36px">Not another<br>model SDK.</h2>
+    <p class="body reveal d3" style="margin-top:56px;max-width:700px">Your application talks to the SDK client. The SDK talks over JSON-RPC to the Copilot CLI running in server mode. <strong>That CLI is where the agent runtime lives.</strong></p>
+    <div style="position:absolute;right:190px;top:110px;bottom:140px;display:flex;align-items:center">
+      <div class="flow v" style="gap:0">
+        <div class="node frag" style="min-width:420px">YOUR APPLICATION</div>
+        <div class="cv frag"></div>
+        <div class="node n-green frag" style="min-width:420px">COPILOT SDK</div>
+        <div class="cv frag"></div>
+        <div class="node n-ghost n-grey frag" style="min-width:420px">JSON-RPC</div>
+        <div class="cv frag"></div>
+        <div class="node n-green frag" style="min-width:420px;flex-direction:column;gap:6px">COPILOT CLI<small>agent runtime</small></div>
+        <div class="cv frag"></div>
+        <div class="node n-blue frag" style="min-width:420px">MODEL</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 04 - MODEL CALL vs AGENT RUNTIME
+     ============================================================ -->
+<section class="slide" data-name="call-vs-runtime">
+  <div class="pad">
+    <div class="kicker reveal">The distinction that matters</div>
+    <div class="split2" style="margin-top:70px;height:calc(100% - 120px);grid-template-columns:1fr 1px 1.2fr;gap:80px">
+      <div>
+        <div class="kicker reveal d1" style="color:var(--muted)">Model call</div>
+        <div class="flow v reveal d2" style="margin-top:60px;gap:0">
+          <div class="node n-purple">PROMPT</div>
+          <div class="cv"></div>
+          <div class="node n-blue">MODEL</div>
+          <div class="cv"></div>
+          <div class="node">ANSWER</div>
+        </div>
+      </div>
+      <div class="vline reveal d2"></div>
+      <div>
+        <div class="kicker reveal d1"><span class="g">Agent runtime</span></div>
+        <div class="flow v" style="margin-top:60px;gap:0">
+          <div class="node n-purple frag">PROMPT</div>
+          <div class="cv g frag"></div>
+          <div class="node n-blue frag">MODEL</div>
+          <div class="cv g frag"></div>
+          <div class="node n-amber frag">TOOL</div>
+          <div class="cv g frag"></div>
+          <div class="node n-grey frag">RESULT</div>
+          <div class="cv g frag"></div>
+          <div class="node n-blue frag">MODEL&nbsp;&nbsp;<small style="display:inline;color:var(--green)">↺ …until idle</small></div>
+          <div class="cv g frag"></div>
+          <div class="node n-green frag">ANSWER</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 05 - KEY PHRASE
+     ============================================================ -->
+<section class="slide" data-name="key-phrase">
+  <div class="pad" style="display:flex;flex-direction:column;justify-content:center">
+    <div class="kicker reveal">The one sentence</div>
+    <p class="statement reveal d2" style="margin-top:60px;max-width:1500px">The SDK gives us programmatic access to Copilot's <span class="g">agent runtime</span>.</p>
+    <p class="body reveal d4" style="margin-top:70px;max-width:900px">The same engine behind Copilot CLI: planning, tool invocation, file edits. Embedded in software <strong>you</strong> build.</p>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 06 - LAB 01 INTRO
+     ============================================================ -->
+<section class="slide" data-name="lab-1">
+  <div class="pad">
+    <div class="lab-num reveal">LAB 01</div>
+    <h2 class="reveal d1" style="margin-top:50px">Hello,<br><span class="g">Copilot.</span></h2>
+    <div class="lab-time reveal d4" style="position:absolute;left:150px;bottom:160px"><span class="g">15</span> MIN</div>
+    <div style="position:absolute;right:150px;top:140px;width:720px">
+      <div class="lab-goal reveal d2">
+        <div class="lbl">GOAL</div>
+        <p class="body" style="font-size:29px">Create a console application, create a session and ask Copilot one question.</p>
+        <div class="hr" style="margin:36px 0"></div>
+        <div class="mt" style="font-size:25px;line-height:2">
+          <span class="m">$</span> dotnet new console -n CopilotSdkWorkshop<br>
+          <span class="m">$</span> cd CopilotSdkWorkshop<br>
+          <span class="m">$</span> dotnet add package <span class="g">GitHub.Copilot.SDK</span>
+        </div>
+      </div>
+      <p class="body reveal d3" style="margin-top:40px;font-size:26px">No tools. No MCP. No clever architecture.<br><strong>Just prove your application can talk to the runtime.</strong></p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 07 - LAB 1 CODE (progressive line highlight)
+     ============================================================ -->
+<section class="slide" data-name="lab-1-code">
+  <div class="pad">
+    <div class="kicker reveal">Lab 01 · The smallest useful path</div>
+    <div class="code sm reveal d2" style="margin-top:56px;max-width:1500px;line-height:1.62">
+<span class="cl"><span class="k">using</span> <span class="t">GitHub.Copilot</span>;</span>
+<span class="cl">&nbsp;</span>
+<span class="cl frag" data-hl><span class="k">await using var</span> <span class="n">client</span> = <span class="k">new</span> <span class="t">CopilotClient</span>();</span>
+<span class="cl">&nbsp;</span>
+<span class="cl frag" data-hl><span class="k">await using var</span> <span class="n">session</span> = <span class="k">await</span> client.<span class="f">CreateSessionAsync</span>(<span class="k">new</span> <span class="t">SessionConfig</span></span>
+<span class="cl frag" data-hl>{</span>
+<span class="cl frag" data-hl>    Model = <span class="s">"auto"</span>,</span>
+<span class="cl frag" data-hl>    OnPermissionRequest = <span class="t">PermissionHandler</span>.<span class="f">ApproveAll</span></span>
+<span class="cl frag" data-hl>});</span>
+<span class="cl">&nbsp;</span>
+<span class="cl frag" data-hl><span class="k">var</span> <span class="n">response</span> = <span class="k">await</span> session.<span class="f">SendAndWaitAsync</span>(<span class="k">new</span> <span class="t">MessageOptions</span></span>
+<span class="cl frag" data-hl>{</span>
+<span class="cl frag" data-hl>    Prompt = <span class="s">"Explain dependency injection in one sentence."</span></span>
+<span class="cl frag" data-hl>});</span>
+<span class="cl">&nbsp;</span>
+<span class="cl frag" data-hl><span class="t">Console</span>.<span class="f">WriteLine</span>(response?.Data.Content);</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 08 - FOUR THINGS JUST HAPPENED
+     ============================================================ -->
+<section class="slide" data-name="four-things">
+  <div class="pad">
+    <div class="kicker reveal">Debrief · Lab 01</div>
+    <h2 class="reveal d1" style="margin-top:36px;font-size:100px">Four things<br>just happened.</h2>
+    <div style="position:absolute;right:170px;top:150px;width:800px">
+      <div class="biglist">
+        <div class="row frag"><div class="num">01</div><div><div class="txt">Client</div><div class="sub">Our connection to the Copilot runtime.</div></div></div>
+        <div class="row frag"><div class="num">02</div><div><div class="txt">Session</div><div class="sub">Not an HTTP wrapper. It has state. An ongoing conversation.</div></div></div>
+        <div class="row frag"><div class="num">03</div><div><div class="txt">Message</div><div class="sub">One prompt into the session.</div></div></div>
+        <div class="row frag"><div class="num">04</div><div><div class="txt">Response</div><div class="sub"><strong style="color:var(--text)">SendAndWaitAsync</strong> waits until the agent is <em>idle</em>, not for one model completion.</div></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 09 - SESSIONS / STATE
+     ============================================================ -->
+<section class="slide" data-name="sessions">
+  <div class="pad">
+    <div class="kicker reveal">State</div>
+    <h2 class="reveal d1" style="margin-top:36px">A session<br><span class="g">remembers.</span></h2>
+    <p class="body reveal d3" style="margin-top:56px;max-width:640px">“My name is Fred.” … “What is my name?”<br><br>No manual replay. The session maintains conversation state, tool state and planning context, which becomes essential once tools enter the picture.</p>
+    <div style="position:absolute;right:190px;top:150px;bottom:160px;display:flex;align-items:center">
+      <div class="flow v" style="gap:0">
+        <div class="node n-purple reveal d2">MESSAGE 1</div>
+        <div class="cv g draw reveal d3"></div>
+        <div class="node n-green reveal d3" style="flex-direction:column;gap:12px;padding:40px 70px">SESSION
+          <small style="line-height:1.8">conversation<br>tool state<br>planning</small>
+        </div>
+        <div class="cv g draw reveal d4"></div>
+        <div class="node n-purple reveal d4">MESSAGE 2</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 10 - THE AGENT LOOP
+     ============================================================ -->
+<section class="slide" data-name="agent-loop">
+  <div class="pad">
+    <div class="kicker reveal">Multi-step loops</div>
+    <h2 class="reveal d1" style="margin-top:36px;font-size:96px">One message can<br>cause <span class="g">many actions.</span></h2>
+    <p class="body reveal d3" style="position:absolute;left:150px;bottom:170px;max-width:620px">The loop continues until Copilot decides it's finished. The abstraction isn't “call model”. It's <strong>“run this task until the agent becomes idle.”</strong></p>
+    <div style="position:absolute;right:140px;top:110px;bottom:120px;display:flex;align-items:center">
+      <div style="display:grid;grid-template-columns:auto auto;gap:0 60px;align-items:center">
+        <div class="flow v" style="gap:0">
+          <div class="node n-purple frag">USER</div>
+          <div class="cv frag"></div>
+          <div class="node n-blue frag">MODEL</div>
+          <div class="cv frag"></div>
+          <div class="node n-ghost n-grey frag" style="font-size:23px">NEED A TOOL?</div>
+          <div class="cv g frag"></div>
+          <div class="node n-amber frag">TOOL</div>
+          <div class="cv g frag"></div>
+          <div class="node n-grey frag">RESULT</div>
+          <div class="cv g frag"></div>
+          <div class="node n-blue frag">MODEL&nbsp;&nbsp;<small style="display:inline;color:var(--green)">↺</small></div>
+        </div>
+        <div class="flow v frag" style="gap:0;align-self:start;margin-top:244px">
+          <div class="clabel" style="margin-bottom:10px">no&nbsp;→</div>
+          <div class="node n-green">ANSWER</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 11 - STREAMING & EVENTS
+     ============================================================ -->
+<section class="slide" data-name="events">
+  <div class="pad">
+    <div class="kicker reveal">The loop is observable</div>
+    <h2 class="reveal d1" style="margin-top:36px;font-size:92px">Don't stare<br>at a spinner.</h2>
+    <p class="body reveal d3" style="margin-top:50px;max-width:620px">The SDK emits session events: thinking, writing, running tools. Stream deltas, observe tool activity, react to lifecycle changes. <strong>Essential for a real UI.</strong></p>
+    <div style="position:absolute;right:150px;top:130px;width:820px">
+      <div class="mt reveal d2" style="background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:36px 50px;font-size:26px;line-height:2.1">
+        <span class="m">session.start</span><br>
+        <span style="color:var(--blue)">assistant.delta</span><br>
+        <span style="color:var(--amber)">tool.execution</span><br>
+        <span style="color:var(--blue)">assistant.delta</span><br>
+        <span class="g">session.idle</span>
+      </div>
+      <div class="code sm frag" style="margin-top:36px">
+<span class="cl">session.<span class="f">On</span>&lt;<span class="t">SessionEvent</span>&gt;(ev =&gt;</span>
+<span class="cl">{</span>
+<span class="cl">    <span class="k">if</span> (ev <span class="k">is</span> <span class="t">AssistantMessageDeltaEvent</span> delta)</span>
+<span class="cl">        <span class="t">Console</span>.<span class="f">Write</span>(delta.Data.DeltaContent);</span>
+<span class="cl">&nbsp;</span>
+<span class="cl">    <span class="k">if</span> (ev <span class="k">is</span> <span class="t">SessionIdleEvent</span>)</span>
+<span class="cl">        <span class="t">Console</span>.<span class="f">WriteLine</span>();</span>
+<span class="cl">});</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 12 - TRANSITION TO TOOLS
+     ============================================================ -->
+<section class="slide" data-name="to-tools">
+  <div class="pad" style="display:flex;flex-direction:column;justify-content:center;align-items:flex-start">
+    <div class="kicker reveal">So far…</div>
+    <div class="flow reveal d2" style="margin-top:70px;gap:0">
+      <div class="node n-purple">USER</div><div class="ch"></div>
+      <div class="node n-green">COPILOT</div><div class="ch"></div>
+      <div class="node n-grey">TEXT</div>
+    </div>
+    <p class="body frag" style="margin-top:70px;font-size:36px">That's useful. <strong>But not very agentic.</strong><br>Ask “Is our API build healthy?” and Copilot has absolutely no reason to know.</p>
+    <p class="statement frag" style="margin-top:80px">Give it something<br>it can <span class="g">do.</span></p>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 13 - TOOLS / CAPABILITIES
+     ============================================================ -->
+<section class="slide" data-name="tools">
+  <div class="pad">
+    <div class="kicker reveal">Capabilities</div>
+    <h2 class="reveal d1" style="margin-top:36px;font-size:92px">A tool gives the agent<br>something it can <span class="g">do.</span></h2>
+    <div class="split2" style="margin-top:90px;grid-template-columns:1fr 1fr;gap:100px;height:auto">
+      <div>
+        <div class="node n-amber reveal d2" style="font-size:34px;padding:34px 50px">get_build_status(<span style="color:var(--muted)">project</span>)</div>
+        <div class="mt reveal d3" style="margin-top:56px;font-size:27px">
+          <span class="m">NAME</span><br>
+          <span class="m">DESCRIPTION</span><br>
+          <span class="m">PARAMETERS</span><br>
+          <span class="m">IMPLEMENTATION</span>
+        </div>
+      </div>
+      <div>
+        <p class="body frag" style="font-size:33px"><strong>We don't call the tool from the prompt.</strong></p>
+        <p class="body frag" style="font-size:33px;margin-top:30px">We <span class="g" style="font-weight:600">expose</span> it.</p>
+        <p class="body frag" style="font-size:33px;margin-top:30px">The model decides whether it needs it.<br><span style="font-size:27px">That's the conceptual leap.</span></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 14 - DEMO: DEFINE A TOOL
+     ============================================================ -->
+<section class="slide" data-name="define-tool">
+  <div class="pad">
+    <div class="kicker reveal">Demo · <span class="g">CopilotTool.DefineTool</span></div>
+    <div class="code sm reveal d2" style="margin-top:60px;max-width:1560px">
+<span class="cl frag" data-hl><span class="k">var</span> <span class="n">getBuildStatus</span> = <span class="t">CopilotTool</span>.<span class="f">DefineTool</span>(</span>
+<span class="cl frag" data-hl>    ([<span class="t">Description</span>(<span class="s">"Project name"</span>)] <span class="k">string</span> project) =&gt;</span>
+<span class="cl frag" data-hl>    {</span>
+<span class="cl frag" data-hl>        <span class="k">return</span> project.<span class="f">ToLowerInvariant</span>() <span class="k">switch</span></span>
+<span class="cl frag" data-hl>        {</span>
+<span class="cl frag" data-hl>            <span class="s">"frontend"</span> =&gt; <span class="k">new</span> { project, status = <span class="s">"passing"</span> },</span>
+<span class="cl frag" data-hl>            <span class="s">"api"</span>      =&gt; <span class="k">new</span> { project, status = <span class="s">"failing"</span> },</span>
+<span class="cl frag" data-hl>            <span class="s">"database"</span> =&gt; <span class="k">new</span> { project, status = <span class="s">"passing"</span> },</span>
+<span class="cl frag" data-hl>            _          =&gt; <span class="k">new</span> { project, status = <span class="s">"unknown"</span> }</span>
+<span class="cl frag" data-hl>        };</span>
+<span class="cl frag" data-hl>    },</span>
+<span class="cl frag" data-hl>    factoryOptions: <span class="k">new</span> <span class="t">AIFunctionFactoryOptions</span></span>
+<span class="cl frag" data-hl>    {</span>
+<span class="cl frag" data-hl>        Name = <span class="s">"get_build_status"</span>,</span>
+<span class="cl frag" data-hl>        Description = <span class="s">"Gets the current build status for a project."</span></span>
+<span class="cl frag" data-hl>    });</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 15 - DEMO: REGISTER THE TOOL
+     ============================================================ -->
+<section class="slide" data-name="register-tool">
+  <div class="pad">
+    <div class="kicker reveal">Demo · One line changes everything</div>
+    <div class="code reveal d2" style="margin-top:80px;max-width:1420px">
+<span class="cl"><span class="k">await using var</span> <span class="n">session</span> = <span class="k">await</span> client.<span class="f">CreateSessionAsync</span>(<span class="k">new</span> <span class="t">SessionConfig</span></span>
+<span class="cl">{</span>
+<span class="cl">    Model = <span class="s">"auto"</span>,</span>
+<span class="cl">    OnPermissionRequest = <span class="t">PermissionHandler</span>.<span class="f">ApproveAll</span>,</span>
+<span class="cl frag" data-hl>    Tools = [getBuildStatus]</span>
+<span class="cl">});</span>
+    </div>
+    <p class="body frag" style="margin-top:70px;max-width:1000px;font-size:33px">The session now starts with a <span style="color:var(--amber)">capability</span>.<br>We never tell it when to use it.</p>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 16 - TOOL CALL ANIMATION
+     ============================================================ -->
+<section class="slide" data-name="tool-call-anim">
+  <div class="pad">
+    <div class="kicker reveal">“Which projects are currently failing?”</div>
+    <div style="position:absolute;left:150px;right:150px;top:230px;bottom:150px;display:flex;align-items:center;justify-content:center">
+      <div style="display:grid;grid-template-columns:auto auto auto;gap:50px 90px;align-items:center">
+        <!-- row 1 -->
+        <div class="node n-purple frag">USER</div>
+        <div class="ch frag" style="width:90px"></div>
+        <div class="node n-green frag" style="flex-direction:column;gap:6px">AGENT<small>"I need build information."</small></div>
+        <!-- row 2: first tool call -->
+        <div class="frag" style="grid-column:3"><div class="flow v" style="gap:0">
+          <div class="cv g"></div>
+          <div class="node n-amber" style="font-size:23px">get_build_status(<span style="color:var(--muted)">"frontend"</span>)</div>
+          <div class="cv"></div>
+          <div class="node n-grey" style="font-size:23px;color:var(--green);border-color:var(--green-dim)">passing</div>
+        </div></div>
+        <!-- row 3: second tool call -->
+        <div class="frag" style="grid-column:3"><div class="flow v" style="gap:0">
+          <div class="cv g"></div>
+          <div class="node n-amber" style="font-size:23px">get_build_status(<span style="color:var(--muted)">"api"</span>)</div>
+          <div class="cv"></div>
+          <div class="node" style="font-size:23px;color:var(--red);border-color:rgba(248,81,73,.5)">failing</div>
+        </div></div>
+        <!-- row 4: answer -->
+        <div class="frag" style="grid-column:3"><div class="flow v" style="gap:0">
+          <div class="cv g"></div>
+          <div class="node n-green">ANSWER</div>
+        </div></div>
+      </div>
+    </div>
+    <p class="body frag" style="position:absolute;left:150px;bottom:140px;max-width:680px">No <span style="font-family:var(--font-mono);font-size:25px">if prompt contains "build"</span>. No workflow engine. We gave Copilot a capability and a description. <strong>The agent decides how to use it.</strong></p>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 17 - LAB 02
+     ============================================================ -->
+<section class="slide" data-name="lab-2">
+  <div class="pad">
+    <div class="lab-num reveal">LAB 02</div>
+    <h2 class="reveal d1" style="margin-top:50px">Give Copilot<br>a <span class="g">capability.</span></h2>
+    <div class="lab-time reveal d4" style="position:absolute;left:150px;bottom:160px"><span class="g">15</span> MIN</div>
+    <div style="position:absolute;right:150px;top:140px;width:760px">
+      <div class="lab-goal reveal d2">
+        <div class="lbl">GOAL</div>
+        <p class="body" style="font-size:28px">Implement <span style="font-family:var(--font-mono);color:var(--amber)">get_service_status(service)</span> and ask:</p>
+        <p class="body" style="font-size:29px;margin-top:24px;color:var(--text)">“Why might checkout currently be unavailable?”</p>
+        <div class="hr" style="margin:36px 0"></div>
+        <div class="mt" style="font-size:25px">
+          checkout <span class="arr">→</span> <span style="color:var(--amber)">degraded</span><br>
+          payments <span class="arr">→</span> <span class="g">healthy</span><br>
+          catalog &nbsp;<span class="arr">→</span> <span class="g">healthy</span>
+        </div>
+      </div>
+      <div class="lab-goal reveal d3" style="margin-top:32px;border-style:dashed">
+        <div class="lbl" style="color:var(--muted)">BONUS</div>
+        <p class="body" style="font-size:27px">Add <span style="font-family:var(--font-mono);color:var(--amber)">get_incidents(service)</span>, then ask a question where Copilot has to decide which capabilities it needs.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 18 - BREAK
+     ============================================================ -->
+<section class="slide" data-name="break">
+  <div class="pad" style="display:flex;flex-direction:column;justify-content:center;align-items:flex-start">
+    <div class="kicker reveal">Intermission</div>
+    <h2 class="reveal d2" style="margin-top:50px;font-size:160px"><span class="g">10 minute</span><br>break</h2>
+    <p class="reveal d4" style="margin-top:70px;font:400 28px/1 var(--font-mono);color:var(--muted)">// human runtime maintenance</p>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 19 - ZOOMING OUT: ALREADY AN AGENT
+     ============================================================ -->
+<section class="slide" data-name="already-agent">
+  <div class="pad">
+    <div class="kicker reveal">Zooming out</div>
+    <div style="position:absolute;left:150px;top:260px">
+      <div style="display:grid;grid-template-columns:auto auto auto auto auto;gap:0;align-items:center">
+        <div class="node n-purple reveal d1">USER</div>
+        <div class="ch draw reveal d2"></div>
+        <div class="node reveal d2">SESSION</div>
+        <div class="ch g draw reveal d3"></div>
+        <div style="display:flex;flex-direction:column;gap:30px">
+          <div class="flow reveal d3" style="gap:0"><div class="node n-green">AGENT LOOP</div></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:40px;margin-left:640px;margin-top:40px">
+        <div class="flow v reveal d4" style="gap:0"><div class="cv g"></div><div class="node n-blue">MODEL</div></div>
+        <div class="flow v reveal d4" style="gap:0"><div class="cv g"></div><div class="node n-amber">TOOLS</div></div>
+      </div>
+    </div>
+    <p class="statement frag" style="position:absolute;left:150px;bottom:170px;font-size:120px">This is already<br>an <span class="g">agent.</span></p>
+    <p class="body frag" style="position:absolute;right:150px;bottom:180px;max-width:560px">An objective. A model deciding what to do next. Tools that touch the outside world. A loop that runs until it finishes.</p>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 20 - MULTIPLE CAPABILITIES
+     ============================================================ -->
+<section class="slide" data-name="multi-capabilities">
+  <div class="pad">
+    <div class="kicker reveal">Developer support agent</div>
+    <h2 class="reveal d1" style="margin-top:36px;font-size:88px">“Why can't we deploy<br>the payments service?”</h2>
+    <div style="position:absolute;left:150px;bottom:160px">
+      <div style="display:grid;grid-template-columns:auto auto auto auto auto;gap:0;align-items:center">
+        <div class="node n-purple reveal d2">USER</div>
+        <div class="ch draw reveal d3"></div>
+        <div class="node n-green reveal d3">AGENT</div>
+        <div class="ch g draw reveal d4" style="width:60px"></div>
+        <div class="branches reveal d4" style="border-color:var(--green-dim)">
+          <div class="branch"><div class="stub"></div><div class="node n-amber">get_build_status()</div></div>
+          <div class="branch"><div class="stub"></div><div class="node n-amber">get_open_pull_requests()</div></div>
+          <div class="branch"><div class="stub"></div><div class="node n-amber">get_deployment_status()</div></div>
+        </div>
+      </div>
+    </div>
+    <div style="position:absolute;right:150px;top:330px;width:560px">
+      <div class="mt frag" style="font-size:26px;line-height:2.2">
+        deployment_status <span class="arr">→</span> <span style="color:var(--red)">blocked</span>
+      </div>
+      <div class="mt frag" style="font-size:26px;line-height:2.2">
+        build_status <span class="arr">→</span> <span class="g">passing</span>
+      </div>
+      <div class="mt frag" style="font-size:26px;line-height:2.2">
+        pull_requests <span class="arr">→</span> <span style="color:var(--amber)">1 blocking PR</span>
+      </div>
+      <p class="body frag" style="margin-top:40px;font-size:27px"><strong>We didn't encode that order.</strong> On a different problem, it might choose a different path.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 21 - TOOL DESIGN
+     ============================================================ -->
+<section class="slide" data-name="tool-design">
+  <div class="pad">
+    <div class="kicker reveal">Tool design</div>
+    <h2 class="reveal d1" style="margin-top:36px">Small. Clear.<br><span class="g">Deterministic.</span></h2>
+    <div style="position:absolute;right:150px;top:140px;width:740px">
+      <div class="reveal d2">
+        <div class="kicker" style="color:var(--red);letter-spacing:.3em">BAD</div>
+        <div class="node n-ghost reveal d2" style="margin-top:24px;border-color:rgba(248,81,73,.5);color:var(--muted);font-size:30px">manage_project()</div>
+      </div>
+      <div class="hr" style="margin:50px 0"></div>
+      <div class="frag">
+        <div class="kicker g" style="letter-spacing:.3em">BETTER</div>
+        <div style="display:flex;flex-direction:column;gap:18px;margin-top:24px;align-items:flex-start">
+          <div class="node n-amber" style="font-size:26px">get_build_status()</div>
+          <div class="node n-amber" style="font-size:26px">get_deployment_status()</div>
+          <div class="node n-amber" style="font-size:26px">restart_service()</div>
+        </div>
+      </div>
+    </div>
+    <p class="body frag" style="position:absolute;left:150px;bottom:160px;max-width:800px">Names and descriptions are how the model chooses. Return structured, predictable results. <strong>The model reasons over the result. The tool does the deterministic part.</strong><br><br><span style="font-size:26px">Same principle as deterministic guardrails: let AI handle ambiguity, let normal code handle what normal code is better at.</span></p>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 22 - LAB 03
+     ============================================================ -->
+<section class="slide" data-name="lab-3">
+  <div class="pad">
+    <div class="lab-num reveal">LAB 03</div>
+    <h2 class="reveal d1" style="margin-top:44px;font-size:104px">Build an<br><span class="g">investigator.</span></h2>
+    <div class="lab-time reveal d4" style="position:absolute;left:150px;bottom:160px"><span class="g">20</span> MIN</div>
+    <p class="body reveal d3" style="position:absolute;left:150px;bottom:260px;max-width:600px;font-size:26px">Pick one track. <strong>Hardcoded data is encouraged.</strong><br>Can you design capabilities that let the agent investigate the question?</p>
+    <div style="position:absolute;right:130px;top:130px;width:810px;display:flex;flex-direction:column;gap:26px">
+      <div class="lab-goal reveal d2" style="padding:34px 44px">
+        <div class="lbl">A · DEVOPS</div>
+        <div class="mt" style="font-size:23px;line-height:1.9">get_build_status · get_deployment_status · get_incidents</div>
+        <p class="body" style="font-size:25px;margin-top:16px;color:var(--text)">“Why is checkout unavailable?”</p>
+      </div>
+      <div class="lab-goal reveal d3" style="padding:34px 44px">
+        <div class="lbl">B · GITHUB</div>
+        <div class="mt" style="font-size:23px;line-height:1.9">get_repository · get_pull_requests · get_issues</div>
+        <p class="body" style="font-size:25px;margin-top:16px;color:var(--text)">“What should this team work on next?”</p>
+      </div>
+      <div class="lab-goal reveal d4" style="padding:34px 44px">
+        <div class="lbl">C · SUPPORT</div>
+        <div class="mt" style="font-size:23px;line-height:1.9">get_customer · get_orders · get_incidents</div>
+        <p class="body" style="font-size:25px;margin-top:16px;color:var(--text)">“Why is customer 123 unhappy?”</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 23 - DEBRIEF LAB 3 / OBSERVABILITY
+     ============================================================ -->
+<section class="slide" data-name="debrief-3">
+  <div class="pad">
+    <div class="kicker reveal">Debrief · Lab 03</div>
+    <h2 class="reveal d1" style="margin-top:36px;font-size:88px">Did anyone's agent take<br>a path you didn't expect?</h2>
+    <div class="split2 frag" style="margin-top:100px;grid-template-columns:1fr 1px 1fr;gap:90px;height:auto">
+      <p class="body" style="font-size:31px">That's the blessing and the curse of agents: <strong>the workflow isn't predetermined.</strong></p>
+      <div class="vline"></div>
+      <div class="mt" style="font-size:27px;line-height:2.2">
+        <span class="m">what did it</span> <span class="g">call</span>,<br>
+        <span class="m">in what</span> <span class="g">order</span>,<br>
+        <span class="m">what came</span> <span class="g">back</span>,<br>
+        <span class="m">why did it</span> <span class="g">stop</span>?
+      </div>
+    </div>
+    <p class="body frag" style="position:absolute;left:150px;bottom:160px;font-size:29px">That's why <strong>observability</strong> becomes so important.</p>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 24 - CUSTOM TOOL vs MCP
+     ============================================================ -->
+<section class="slide" data-name="mcp">
+  <div class="pad">
+    <div class="kicker reveal">Extending the agent</div>
+    <div class="split2 reveal d2" style="margin-top:70px;grid-template-columns:1fr 1px 1fr;gap:90px;height:430px">
+      <div>
+        <div class="kicker" style="color:var(--amber);letter-spacing:.3em">CUSTOM TOOL</div>
+        <div class="mt" style="margin-top:40px;font-size:27px;line-height:2">
+          Runs in / with <strong style="color:var(--text)">your application</strong><br>
+          <span class="m">Application-specific</span><br>
+          <span class="m">Direct code</span>
+        </div>
+      </div>
+      <div class="vline"></div>
+      <div>
+        <div class="kicker" style="color:var(--blue);letter-spacing:.3em">MCP</div>
+        <div class="mt" style="margin-top:40px;font-size:27px;line-height:2">
+          Capability exposed by <strong style="color:var(--text)">another service</strong><br>
+          <span class="m">Reusable / external</span><br>
+          <span class="m">Protocol boundary</span>
+        </div>
+      </div>
+    </div>
+    <div style="position:absolute;left:150px;bottom:150px">
+      <div style="display:grid;grid-template-columns:auto auto auto auto auto;gap:0;align-items:center">
+        <div class="node frag">APP</div>
+        <div class="ch draw frag"></div>
+        <div class="node n-green frag">AGENT</div>
+        <div class="ch g draw frag" style="width:60px"></div>
+        <div class="branches frag" style="border-color:var(--green-dim);gap:16px">
+          <div class="branch"><div class="stub"></div><div class="node n-amber" style="font-size:22px;padding:12px 26px">CUSTOM TOOL</div></div>
+          <div class="branch"><div class="stub"></div><div class="node n-blue" style="font-size:22px;padding:12px 26px">GITHUB MCP</div></div>
+          <div class="branch"><div class="stub"></div><div class="node n-blue" style="font-size:22px;padding:12px 26px">INTERNAL MCP</div></div>
+          <div class="branch"><div class="stub"></div><div class="node n-blue" style="font-size:22px;padding:12px 26px">DATABASE MCP</div></div>
+        </div>
+      </div>
+    </div>
+    <p class="body frag" style="position:absolute;right:150px;bottom:170px;max-width:600px">From the agent's perspective, <strong>both look like capabilities it can use.</strong> MCP isn't a new agent concept. It's another way of providing tools to the same loop.</p>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 25 - PERSISTENCE
+     ============================================================ -->
+<section class="slide" data-name="persistence">
+  <div class="pad">
+    <div class="kicker reveal">Persistence</div>
+    <h2 class="reveal d1" style="margin-top:36px;font-size:92px">Sessions can<br>outlive a <span class="g">process.</span></h2>
+    <div style="position:absolute;left:150px;bottom:160px;display:flex;gap:110px;align-items:flex-start">
+      <div>
+        <div class="kicker reveal d2" style="font-size:21px">TODAY</div>
+        <div class="flow v reveal d2" style="gap:0;margin-top:26px">
+          <div class="node" style="font-size:23px">CREATE SESSION</div>
+          <div class="cv"></div>
+          <div class="node" style="font-size:23px">INVESTIGATE</div>
+          <div class="cv"></div>
+          <div class="node n-green" style="font-size:23px">PERSIST</div>
+        </div>
+      </div>
+      <div class="frag">
+        <div class="kicker" style="font-size:21px;color:var(--green)">TOMORROW</div>
+        <div class="flow v" style="gap:0;margin-top:26px">
+          <div class="node n-green" style="font-size:23px">RESUME SESSION</div>
+          <div class="cv g"></div>
+          <div class="node" style="font-size:23px">CONTINUE</div>
+        </div>
+      </div>
+    </div>
+    <div style="position:absolute;right:150px;top:150px;width:800px">
+      <div class="code sm frag">
+<span class="cl"><span class="k">var</span> <span class="n">session</span> = <span class="k">await</span> client.<span class="f">CreateSessionAsync</span>(</span>
+<span class="cl">    <span class="k">new</span> <span class="t">SessionConfig</span></span>
+<span class="cl">    {</span>
+<span class="cl">        SessionId = <span class="s">"release-check-2026-10-15"</span></span>
+<span class="cl">    });</span>
+      </div>
+      <div class="code sm frag" style="margin-top:30px">
+<span class="cl"><span class="c">// later: another process, another day</span></span>
+<span class="cl"><span class="k">var</span> <span class="n">session</span> = <span class="k">await</span> client.<span class="f">ResumeSessionAsync</span>(</span>
+<span class="cl">    <span class="s">"release-check-2026-10-15"</span>);</span>
+      </div>
+      <p class="body frag" style="margin-top:40px;font-size:27px">Conversation history, tool state and planning context restored. <strong>An agent no longer has to finish everything in one HTTP request.</strong></p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 26 - PERMISSIONS
+     ============================================================ -->
+<section class="slide" data-name="permissions">
+  <div class="pad">
+    <div class="kicker reveal">Control</div>
+    <h2 class="reveal d1" style="margin-top:36px;font-size:100px">Agentic<br><span style="color:var(--muted)">≠</span> uncontrolled.</h2>
+    <p class="body reveal d3" style="margin-top:56px;max-width:660px"><span style="font-family:var(--font-mono);font-size:25px;color:var(--amber)">ApproveAll</span> was a workshop convenience, not a production security recommendation.<br><br>Permission handling and lifecycle hooks can inspect, approve, deny or transform tool activity. <strong>The model proposes. Your application decides.</strong></p>
+    <div style="position:absolute;right:220px;top:150px;bottom:150px;display:flex;align-items:center">
+      <div class="flow v" style="gap:0">
+        <div class="node n-green frag">AGENT</div>
+        <div class="cv frag"></div>
+        <div class="node n-amber frag">TOOL REQUEST</div>
+        <div class="cv frag"></div>
+        <div class="node frag" style="flex-direction:column;gap:6px">PERMISSION / POLICY<small>hooks · governance</small></div>
+        <div class="frag" style="display:flex;gap:70px;margin-top:44px">
+          <div class="flow v" style="gap:0"><div class="cv g"></div><div class="node" style="color:var(--green);border-color:var(--green)">ALLOW</div></div>
+          <div class="flow v" style="gap:0"><div class="cv" style="background:rgba(248,81,73,.4)"></div><div class="node" style="color:var(--red);border-color:rgba(248,81,73,.55)">DENY</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 27 - MULTI-AGENT
+     ============================================================ -->
+<section class="slide" data-name="multi-agent">
+  <div class="pad">
+    <div class="kicker reveal">When one context isn't enough</div>
+    <h2 class="reveal d1" style="margin-top:36px;font-size:88px">Agent count is not<br>a maturity metric.</h2>
+    <div style="position:absolute;left:150px;bottom:170px">
+      <div style="display:grid;grid-template-columns:auto auto auto;gap:0;align-items:center">
+        <div class="node n-green reveal d2">MAIN AGENT</div>
+        <div class="ch g draw reveal d3" style="width:60px"></div>
+        <div class="branches reveal d3" style="border-color:var(--green-dim);gap:18px">
+          <div class="branch"><div class="stub"></div><div class="node" style="font-size:23px">RESEARCH AGENT</div></div>
+          <div class="branch"><div class="stub"></div><div class="node" style="font-size:23px">CODE AGENT</div></div>
+          <div class="branch"><div class="stub"></div><div class="node" style="font-size:23px">REVIEW AGENT</div></div>
+        </div>
+      </div>
+    </div>
+    <div style="position:absolute;right:150px;top:340px;width:640px">
+      <p class="body frag" style="font-size:29px">Multiple agents become interesting when work can <strong>genuinely be separated</strong>:</p>
+      <div class="mt frag" style="margin-top:30px;font-size:26px;line-height:2.1">
+        <span class="m">·</span> different responsibilities<br>
+        <span class="m">·</span> different context<br>
+        <span class="m">·</span> parallel work<br>
+        <span class="m">·</span> specialised instructions &amp; tools
+      </div>
+      <p class="body frag" style="margin-top:34px;font-size:26px">Context isolation: a sub-agent works a focused task and returns a <strong>summary</strong> instead of stuffing everything into the parent context.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 28 - START SIMPLE
+     ============================================================ -->
+<section class="slide" data-name="start-simple">
+  <div class="pad" style="display:flex;flex-direction:column;justify-content:center;align-items:flex-start">
+    <div class="kicker reveal">Architectural warning</div>
+    <div class="flow reveal d2" style="margin-top:80px;gap:40px;align-items:center">
+      <div class="node n-green" style="font-size:34px;padding:34px 56px">ONE AGENT</div>
+      <span style="font:600 50px/1 var(--font-display);color:var(--muted)">+</span>
+      <div class="node n-amber" style="font-size:34px;padding:34px 56px">GOOD TOOLS</div>
+    </div>
+    <div class="frag" style="margin-top:60px;margin-left:120px">
+      <div class="flow v" style="gap:0;align-items:flex-start">
+        <div class="flow" style="gap:24px;align-items:center">
+          <div class="cv" style="height:70px"></div>
+          <span class="clabel">only when needed</span>
+        </div>
+        <div class="node n-grey" style="font-size:30px;padding:28px 48px;margin-left:0">MULTIPLE AGENTS</div>
+      </div>
+    </div>
+    <p class="body frag" style="margin-top:80px;max-width:1100px;font-size:31px">Split when an agent is overloaded, has conflicting instructions, needs radically different context, or contains genuinely independent work.<br><br><strong>Multi-agent architecture is sometimes just distributed confusion with more API calls.</strong></p>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 29 - FINAL CHALLENGE
+     ============================================================ -->
+<section class="slide" data-name="final-challenge">
+  <div class="pad">
+    <div class="lab-num reveal">FINAL CHALLENGE</div>
+    <h2 class="reveal d1" style="margin-top:50px">Are we ready<br>to <span class="g">release?</span></h2>
+    <div class="lab-time reveal d4" style="position:absolute;left:150px;bottom:160px"><span class="g">10</span> MIN</div>
+    <div style="position:absolute;right:150px;top:150px;width:740px">
+      <div class="lab-goal reveal d2">
+        <div class="lbl">CAPABILITIES</div>
+        <div class="mt" style="font-size:26px;line-height:2.1;color:var(--amber)">
+          get_build_status()<br>
+          get_tests()<br>
+          get_open_pull_requests()<br>
+          get_security_findings()
+        </div>
+      </div>
+      <p class="body reveal d3" style="margin-top:44px;font-size:28px">I'm not telling you which ones need to be called.<br><br><strong>Don't encode the decision tree.</strong> Give the agent the evidence it needs and see how it investigates.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 30 - WHAT JUST HAPPENED
+     ============================================================ -->
+<section class="slide" data-name="what-happened">
+  <div class="pad">
+    <div class="kicker reveal">Debrief</div>
+    <h2 class="reveal d1" style="margin-top:36px;font-size:96px">What just<br>happened?</h2>
+    <p class="body frag" style="position:absolute;left:150px;bottom:170px;max-width:640px">We started with five lines of code that sent a prompt. <strong>The core model barely changed.</strong> What changed is what surrounded it: state, capabilities, the permission to decide, connections beyond the application.</p>
+    <div style="position:absolute;right:220px;top:120px;bottom:140px;display:flex;align-items:center">
+      <div class="flow v" style="gap:0">
+        <div class="node n-purple frag">PROMPT</div>
+        <div class="cv frag"></div>
+        <div class="node frag">SESSION</div>
+        <div class="cv frag"></div>
+        <div class="node n-green frag">AGENT LOOP</div>
+        <div class="cv frag"></div>
+        <div class="node n-amber frag">TOOLS</div>
+        <div class="cv frag"></div>
+        <div class="node n-blue frag">EXTERNAL CAPABILITIES</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 31 - FROM THIS → TO THIS (architecture payoff)
+     ============================================================ -->
+<section class="slide" data-name="payoff">
+  <div class="pad">
+    <div class="kicker reveal">From this…</div>
+    <div class="flow reveal d2" style="margin-top:50px;gap:0">
+      <div class="node">APP</div><div class="ch g draw"></div><div class="node n-green">COPILOT</div>
+    </div>
+    <div class="frag" style="margin-top:70px">
+      <div class="kicker" style="margin-bottom:34px">…to <span class="g">this.</span></div>
+      <div style="display:grid;grid-template-columns:auto auto auto auto auto;gap:0;align-items:center">
+        <div class="node" style="font-size:30px;padding:28px 46px">APP</div>
+        <div class="ch g draw" style="width:80px"></div>
+        <div class="node n-green" style="font-size:30px;padding:28px 46px">COPILOT AGENT</div>
+        <div class="ch g draw" style="width:60px"></div>
+        <div class="branches" style="border-color:var(--green-dim);gap:10px">
+          <div class="branch frag"><div class="stub"></div><div class="node" style="font-size:20px;padding:8px 22px">GITHUB</div></div>
+          <div class="branch frag"><div class="stub"></div><div class="node" style="font-size:20px;padding:8px 22px">CI/CD</div></div>
+          <div class="branch frag"><div class="stub"></div><div class="node" style="font-size:20px;padding:8px 22px">DATABASE</div></div>
+          <div class="branch frag"><div class="stub"></div><div class="node n-amber" style="font-size:20px;padding:8px 22px">CUSTOM TOOLS</div></div>
+          <div class="branch frag"><div class="stub"></div><div class="node n-blue" style="font-size:20px;padding:8px 22px">MCP</div></div>
+          <div class="branch frag"><div class="stub"></div><div class="node" style="font-size:20px;padding:8px 22px">INTERNAL APIS</div></div>
+          <div class="branch frag"><div class="stub"></div><div class="node" style="font-size:20px;padding:8px 22px">OTHER AGENTS</div></div>
+        </div>
+      </div>
+    </div>
+    <p class="body frag" style="position:absolute;left:150px;bottom:150px;max-width:900px">At the beginning this would have looked like ten unrelated concepts. <strong>Now every branch has somewhere to live in your head.</strong></p>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 32 - CLOSING STATEMENT
+     ============================================================ -->
+<section class="slide" data-name="closing">
+  <div class="edge"></div>
+  <div class="pad" style="display:flex;flex-direction:column;justify-content:center;padding-left:180px">
+    <div class="kicker reveal">The important part</div>
+    <p class="statement reveal d2" style="margin-top:70px">You didn't integrate<br>an LLM.</p>
+    <p class="statement frag" style="margin-top:70px">You gave your application<br>an <span class="g">agent runtime.</span></p>
+    <p class="body frag" style="margin-top:80px;max-width:1000px;font-size:29px">Start small. Give the agent clear capabilities. Keep deterministic work deterministic. Observe what it does. <strong>Add autonomy only when it buys you something.</strong></p>
+  </div>
+</section>
+
+<!-- ============================================================
+     SLIDE 33 - FIVE THINGS TO REMEMBER
+     ============================================================ -->
+<section class="slide" data-name="summary">
+  <div class="pad">
+    <div class="kicker reveal">Five things to remember</div>
+    <div class="biglist" style="margin-top:80px;gap:52px">
+      <div class="row frag"><div class="num">01</div><div class="txt" style="font-size:62px">A session is more than a model call.</div></div>
+      <div class="row frag"><div class="num">02</div><div class="txt" style="font-size:62px">Tools give the agent <span class="g">capabilities.</span></div></div>
+      <div class="row frag"><div class="num">03</div><div class="txt" style="font-size:62px">The agent loop chooses how to use them.</div></div>
+      <div class="row frag"><div class="num">04</div><div class="txt" style="font-size:62px">MCP moves capabilities across a boundary.</div></div>
+      <div class="row frag"><div class="num">05</div><div class="txt" style="font-size:62px">Start with <span class="g">one agent.</span> Add complexity when the problem demands it.</div></div>
+    </div>
+  </div>
+</section>
+
+</main>
+</div>
+
+<!-- === PRESENTATION CHROME (outside the slide stage) === -->
+<div class="bottom-line"></div>
+<div class="chrome-no" id="pageNo">01 / 33</div>
+<svg class="chrome-mark" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+
+<!-- === INLINE EDITING UI === -->
+<div class="edit-hotzone"></div>
+<button class="edit-toggle" id="editToggle" title="Edit mode (E)">✏️</button>
+
+<script>
+/* ===========================================
+   SLIDE PRESENTATION CONTROLLER
+   - fixed 1920×1080 stage, scaled uniformly
+   - fragment stepping (→ / space reveals .frag
+     one at a time before advancing the slide)
+   - keyboard, wheel and touch navigation
+   =========================================== */
+class SlidePresentation {
+  constructor() {
+    this.slides = Array.from(document.querySelectorAll('.slide'));
+    this.current = 0;
+    this.stage = document.getElementById('deckStage');
+    this.pageNo = document.getElementById('pageNo');
+    this.setupStageScale();
+    this.setupKeyboardNav();
+    this.setupTouchNav();
+    this.setupWheelNav();
+    this.showSlide(0);
+  }
+
+  /* scale whole stage; letterbox, never reflow */
+  setupStageScale() {
+    const scale = () => {
+      const f = Math.min(innerWidth / 1920, innerHeight / 1080);
+      const x = (innerWidth - 1920 * f) / 2;
+      const y = (innerHeight - 1080 * f) / 2;
+      this.stage.style.transform = `translate(${x}px, ${y}px) scale(${f})`;
+    };
+    scale();
+    addEventListener('resize', scale);
+  }
+
+  frags(i) { return Array.from(this.slides[i].querySelectorAll('.frag')); }
+
+  /* step forward: reveal next fragment, else next slide */
+  next() {
+    const fs = this.frags(this.current);
+    const pending = fs.find(f => !f.classList.contains('on'));
+    if (pending) {
+      pending.classList.add('on');
+      /* code-line highlight: newest data-hl line is "current", older fade */
+      if (pending.hasAttribute('data-hl')) {
+        fs.filter(f => f.hasAttribute('data-hl')).forEach(f => f.classList.remove('cur'));
+        pending.classList.add('cur');
+      }
+      return;
+    }
+    this.showSlide(this.current + 1);
+  }
+
+  /* step back: hide last fragment, else previous slide (fully revealed) */
+  prev() {
+    const on = this.frags(this.current).filter(f => f.classList.contains('on'));
+    if (on.length) {
+      const last = on[on.length - 1];
+      last.classList.remove('on', 'cur');
+      if (last.hasAttribute('data-hl')) {
+        const stillOn = on.slice(0, -1).filter(f => f.hasAttribute('data-hl'));
+        if (stillOn.length) stillOn[stillOn.length - 1].classList.add('cur');
+      }
+      return;
+    }
+    this.showSlide(this.current - 1, true);
+  }
+
+  showSlide(index, revealAll = false) {
+    this.current = Math.max(0, Math.min(index, this.slides.length - 1));
+    this.slides.forEach((s, i) => {
+      const active = i === this.current;
+      s.classList.toggle('active', active);
+      s.classList.toggle('visible', active);
+      if (!active && i > this.current) {
+        /* reset fragments on slides ahead of us */
+        s.querySelectorAll('.frag').forEach(f => f.classList.remove('on', 'cur'));
+      }
+    });
+    if (revealAll) {
+      this.frags(this.current).forEach(f => f.classList.add('on'));
+    }
+    this.pageNo.textContent =
+      String(this.current + 1).padStart(2, '0') + ' / ' + String(this.slides.length).padStart(2, '0');
+  }
+
+  setupKeyboardNav() {
+    addEventListener('keydown', e => {
+      if (document.body.classList.contains('editing')) return;
+      if (e.target.getAttribute && e.target.getAttribute('contenteditable')) return;
+      switch (e.key) {
+        case 'ArrowRight': case ' ': case 'PageDown': e.preventDefault(); this.next(); break;
+        case 'ArrowLeft': case 'PageUp': e.preventDefault(); this.prev(); break;
+        case 'Home': this.showSlide(0); break;
+        case 'End': this.showSlide(this.slides.length - 1, true); break;
+      }
+    });
+  }
+
+  setupWheelNav() {
+    let lock = 0;
+    addEventListener('wheel', e => {
+      if (document.body.classList.contains('editing')) return;
+      const now = Date.now();
+      if (now - lock < 500) return;
+      if (Math.abs(e.deltaY) < 24) return;
+      lock = now;
+      e.deltaY > 0 ? this.next() : this.prev();
+    }, { passive: true });
+  }
+
+  setupTouchNav() {
+    let sx = 0, sy = 0;
+    addEventListener('touchstart', e => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive: true });
+    addEventListener('touchend', e => {
+      const dx = e.changedTouches[0].clientX - sx;
+      const dy = e.changedTouches[0].clientY - sy;
+      if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) {
+        dx < 0 ? this.next() : this.prev();
+      } else if (Math.abs(dx) < 12 && Math.abs(dy) < 12) {
+        this.next(); /* simple tap advances */
+      }
+    }, { passive: true });
+  }
+}
+const deck = new SlidePresentation();
+
+/* ===========================================
+   TITLE SLIDE - terminal type-on effect
+   =========================================== */
+(function () {
+  const el = document.getElementById('typed');
+  const txt = 'build an agent';
+  let started = false;
+  const start = () => {
+    if (started) return; started = true;
+    let i = 0;
+    (function t() { if (i < txt.length) { el.textContent += txt[i++]; setTimeout(t, 65); } })();
+  };
+  /* begin once the title slide is visible */
+  const titleSlide = document.querySelector('.slide[data-name="title"]');
+  new MutationObserver(() => {
+    if (titleSlide.classList.contains('visible')) setTimeout(start, 1300);
+  }).observe(titleSlide, { attributes: true });
+  if (titleSlide.classList.contains('visible')) setTimeout(start, 1300);
+  setTimeout(start, 1400);
+})();
+
+/* ===========================================
+   INLINE EDITOR - hover top-left corner or press E
+   Click text to edit · Ctrl/Cmd+S saves the file
+   =========================================== */
+const editor = {
+  isActive: false,
+  toggleEditMode() {
+    this.isActive = !this.isActive;
+    document.body.classList.toggle('editing', this.isActive);
+    document.getElementById('editToggle').classList.toggle('active', this.isActive);
+    document.querySelectorAll('.slide h1,.slide h2,.slide p,.slide .txt,.slide .sub,.slide .kicker,.slide .mt,.slide .cl,.slide .lab-num,.slide .lab-time,.slide .lbl,.slide .clabel,.slide .node,.slide .statement')
+      .forEach(el => {
+        if (this.isActive) el.setAttribute('contenteditable', 'true');
+        else { el.removeAttribute('contenteditable'); }
+      });
+    if (!this.isActive) this.persist();
+  },
+  persist() {
+    try { localStorage.setItem('copilot-sdk-deck-edits', document.getElementById('deckStage').innerHTML); } catch (e) {}
+  },
+  restore() {
+    /* edits are saved to localStorage; Ctrl+S downloads a full copy */
+  },
+  saveFile() {
+    this.persist();
+    const html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+    const blob = new Blob([html], { type: 'text/html' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'copilot-sdk-workshop.html';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+};
+
+const hotzone = document.querySelector('.edit-hotzone');
+const editToggle = document.getElementById('editToggle');
+let hideTimeout = null;
+hotzone.addEventListener('mouseenter', () => { clearTimeout(hideTimeout); editToggle.classList.add('show'); });
+hotzone.addEventListener('mouseleave', () => { hideTimeout = setTimeout(() => { if (!editor.isActive) editToggle.classList.remove('show'); }, 400); });
+editToggle.addEventListener('mouseenter', () => clearTimeout(hideTimeout));
+editToggle.addEventListener('mouseleave', () => { hideTimeout = setTimeout(() => { if (!editor.isActive) editToggle.classList.remove('show'); }, 400); });
+editToggle.addEventListener('click', () => editor.toggleEditMode());
+hotzone.addEventListener('click', () => editor.toggleEditMode());
+addEventListener('keydown', e => {
+  if ((e.key === 'e' || e.key === 'E') && !(e.target.getAttribute && e.target.getAttribute('contenteditable'))) editor.toggleEditMode();
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); editor.saveFile(); }
+});
+</script>
+</body>
+</html>
